@@ -28,6 +28,18 @@ body {
   color: var(--tx);
   min-height: 100vh;
   overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: none) {
+  .hover\:bg-white\/\[0\.04\]:hover,
+  .hover\:bg-\[rgba\(35\,209\,96\,0\.09\)\]:hover {
+    background-color: transparent !important;
+  }
 }
 
 body {
