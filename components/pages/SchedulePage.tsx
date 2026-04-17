@@ -714,7 +714,7 @@ function WeekAllView({
                                 }}
                               />
                             ) : sess ? (
-                              <SessionCard ds={ds} sess={sess} tid={t.id} zoom={zoom} />
+                              <SessionCard ds={ds} sess={sess} tid={t.id} zoom={zoom} compactOnMobile />
                             ) : null}
                             <CancelChips ds={ds} time={h} tid={t.id} />
                           </div>

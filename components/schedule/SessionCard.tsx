@@ -13,11 +13,13 @@ export function SessionCard({
   sess,
   tid,
   zoom = 1,
+  compactOnMobile = false,
 }: {
   ds: string;
   sess: Session;
   tid: TrainerId;
   zoom?: number;
+  compactOnMobile?: boolean;
 }) {
   const { db, mutate } = useStore();
   const t = getTrainer(tid)!;
@@ -57,7 +59,9 @@ export function SessionCard({
       >
         {sess.isFixed && (
           <span
-            className="inline-block rounded px-1 font-bold tracking-wider bg-black/25 text-black leading-none"
+            className={`${
+              compactOnMobile ? "hidden md:inline-block" : "inline-block"
+            } rounded px-1 font-bold tracking-wider bg-black/25 text-black leading-none`}
             style={{ fontSize: `${tagSize}rem` }}
           >
             고정
