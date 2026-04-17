@@ -52,15 +52,18 @@ export function MemberAutocomplete({
   const q = query.trim().toLowerCase();
 
   const matches = useMemo(() => {
+    const byName = (a: Member, b: Member) => a.name.localeCompare(b.name, "ko");
     if (!q) {
-      return db.members.filter((m) => memberHasTrainer(m, tid));
+      return db.members.filter((m) => memberHasTrainer(m, tid)).slice().sort(byName);
     }
-    const primary = db.members.filter(
-      (m) => memberHasTrainer(m, tid) && m.name.toLowerCase().includes(q)
-    );
-    const secondary = db.members.filter(
-      (m) => !memberHasTrainer(m, tid) && m.name.toLowerCase().includes(q)
-    );
+    const primary = db.members
+      .filter((m) => memberHasTrainer(m, tid) && m.name.toLowerCase().includes(q))
+      .slice()
+      .sort(byName);
+    const secondary = db.members
+      .filter((m) => !memberHasTrainer(m, tid) && m.name.toLowerCase().includes(q))
+      .slice()
+      .sort(byName);
     return [...primary, ...secondary];
   }, [db.members, tid, q]);
 

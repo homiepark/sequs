@@ -53,7 +53,7 @@ export function MembersPage() {
   const filtered = useMemo(() => {
     let list = db.members.filter((m) => m.name.toLowerCase().includes(q.toLowerCase()));
     if (trF !== "all") list = list.filter((m) => memberHasTrainer(m, trF as TrainerId));
-    return list;
+    return [...list].sort((a, b) => a.name.localeCompare(b.name, "ko"));
   }, [db.members, q, trF]);
 
   function cntAtt(mid: string, prefix: string | null) {
