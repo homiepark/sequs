@@ -540,7 +540,7 @@ function AllTrainerDayView({
                   <td
                     key={t.id}
                     className={`p-[3px] border-r border-r-bd border-b border-b-bd align-top cursor-pointer hover:bg-white/[0.04] ${cls}`}
-                    style={{ minHeight: rowMin }}
+                    style={{ minHeight: rowMin, height: rowMin }}
                     onClick={(e) => {
                       const tgt = e.target as HTMLElement;
                       if (tgt.dataset.stop === "1") return;
@@ -551,6 +551,7 @@ function AllTrainerDayView({
                       onOpenAction({ date: ds, time: h, tid: t.id, sess, isB, x: e.clientX, y: e.clientY });
                     }}
                   >
+                    <div className="flex flex-col w-full h-full gap-0.5">
                     {isB ? (
                       <BlockedCellContent
                         db={db}
@@ -569,6 +570,7 @@ function AllTrainerDayView({
                       <div className="flex items-center justify-center h-12 text-[1.3rem] text-[rgba(35,209,96,0.2)]">+</div>
                     )}
                     <CancelChips ds={ds} time={h} tid={t.id} />
+                    </div>
                   </td>
                 );
               })}

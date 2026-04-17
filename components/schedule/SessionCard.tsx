@@ -44,7 +44,7 @@ export function SessionCard({
   if (isPreCan || isDayCan) return null;
 
   const cardStyle = { background: t.hex };
-  const cls = "relative flex flex-col items-center justify-center text-center rounded-[5px] px-1 py-0.5 w-full cursor-pointer overflow-hidden group";
+  const cls = "relative flex flex-col items-center justify-center text-center rounded-[5px] px-1 py-0.5 w-full flex-1 cursor-pointer overflow-hidden group";
   const nameSize = Math.max(0.68, 0.8 * zoom);
   const subSize = Math.max(0.5, 0.58 * zoom);
   const tagSize = Math.max(0.48, 0.56 * zoom);
