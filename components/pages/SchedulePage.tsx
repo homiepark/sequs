@@ -106,7 +106,12 @@ export function SchedulePage() {
         <button onClick={() => setWeekOff(0)} className="bg-sf2 border border-acc text-acc px-3 py-1.5 rounded-lg text-[0.8rem] font-semibold">오늘</button>
       </div>
 
-      <WeekTabs weekOff={weekOff} onPick={(off) => setWeekOff(off)} />
+      <WeekTabs
+        weekOff={weekOff}
+        year={days[0].getFullYear()}
+        month={days[0].getMonth() + 1}
+        onPick={(off) => setWeekOff(off)}
+      />
 
       <div className="flex gap-1.5 mb-3 flex-wrap">
         <ModeBtn active={viewMode === "single"} onClick={() => setViewMode("single")}>📋 개별</ModeBtn>
@@ -123,7 +128,7 @@ export function SchedulePage() {
               if (v !== "all") setSelTr(v as TrainerId);
             }}
           />
-          <div ref={gridRef} style={{ fontSize: `${zoom}em`, touchAction: "pan-y" }}>
+          <div ref={gridRef} style={{ touchAction: "pan-y" }}>
             <SingleTrainerView
               db={db}
               days={days}
@@ -167,7 +172,7 @@ export function SchedulePage() {
             })}
           </div>
           <MemoBar ds={allDay} />
-          <div ref={gridRef} style={{ fontSize: `${zoom}em`, touchAction: "pan-y" }}>
+          <div ref={gridRef} style={{ touchAction: "pan-y" }}>
             <AllTrainerDayView
               db={db}
               ds={allDay}
@@ -179,7 +184,7 @@ export function SchedulePage() {
       )}
 
       {viewMode === "weekAll" && (
-        <div ref={gridRef} style={{ fontSize: `${zoom}em`, touchAction: "pan-y" }}>
+        <div ref={gridRef} style={{ touchAction: "pan-y" }}>
           <WeekAllView
             db={db}
             days={days}
@@ -287,7 +292,7 @@ function SingleTrainerView({
       <div
         className="grid bg-sf"
         style={{
-          gridTemplateColumns: `${Math.round(52 * zoom)}px repeat(6, minmax(${colMin}px, 1fr))`,
+          gridTemplateColumns: `52px repeat(6, minmax(${colMin}px, 1fr))`,
           minWidth: 500,
           width: "max-content",
         }}
@@ -336,6 +341,7 @@ function SingleTrainerView({
               return (
                 <Cell
                   key={ds + h}
+                  db={db}
                   ds={ds}
                   time={h}
                   tid={tid}
@@ -359,6 +365,7 @@ import { Fragment } from "react";
 import type { MutateFn } from "@/lib/store";
 
 function Cell({
+  db,
   ds,
   time,
   tid,
@@ -369,6 +376,7 @@ function Cell({
   onOpenAction,
   mutate,
 }: {
+  db: DB;
   ds: string;
   time: string;
   tid: TrainerId;
@@ -396,18 +404,17 @@ function Cell({
       }}
     >
       {isB ? (
-        <button
-          data-stop="1"
-          onClick={(e) => {
-            e.stopPropagation();
+        <BlockedCellContent
+          db={db}
+          ds={ds}
+          time={time}
+          tid={tid}
+          onUnblock={() => {
             mutate("차단 해제", (d) => {
               delete d.blocks[`${ds}_${tid}_${time}`];
             });
           }}
-          className="w-full h-full flex items-center justify-center bg-transparent border-none text-[rgba(220,175,0,0.9)] text-[0.65rem] font-bold"
-        >
-          차단 해제
-        </button>
+        />
       ) : sess ? (
         <SessionCard ds={ds} sess={sess} tid={tid} />
       ) : null}
@@ -494,18 +501,17 @@ function AllTrainerDayView({
                     }}
                   >
                     {isB ? (
-                      <button
-                        data-stop="1"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                      <BlockedCellContent
+                        db={db}
+                        ds={ds}
+                        time={h}
+                        tid={t.id}
+                        onUnblock={() => {
                           mutate("차단 해제", (d) => {
                             delete d.blocks[`${ds}_${t.id}_${h}`];
                           });
                         }}
-                        className="w-full h-full flex items-center justify-center bg-transparent border-none text-[rgba(220,175,0,0.9)] text-[0.65rem] font-bold"
-                      >
-                        차단 해제
-                      </button>
+                      />
                     ) : sess ? (
                       <SessionCard ds={ds} sess={sess} tid={t.id} />
                     ) : (
@@ -534,19 +540,26 @@ function WeekAllView({
   zoom: number;
   onOpenAction: (ctx: ActionContext) => void;
 }) {
-  const colW = Math.round(90 * zoom);
-  const rowMin = Math.round(32 * zoom);
+  const colMin = Math.round(90 * zoom);
+  const rowMin = Math.round(40 * zoom);
   const { mutate } = useStore();
 
   return (
     <div className="overflow-x-auto overflow-y-auto rounded-xl border border-bd w-full block">
-      <table className="border-collapse bg-sf" style={{ width: "max-content", tableLayout: "fixed" }}>
+      <table className="border-collapse bg-sf w-full" style={{ tableLayout: "fixed" }}>
+        <colgroup>
+          <col style={{ width: 56 }} />
+          <col style={{ width: 64 }} />
+          {days.map((d) => (
+            <col key={fmtDateToISO(d)} style={{ minWidth: colMin }} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
-            <th className="sticky top-0 left-0 z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd font-bebas text-[0.85rem] text-acc text-center" style={{ minWidth: 56 }}>
+            <th className="sticky top-0 left-0 z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd font-bebas text-[0.85rem] text-acc text-center">
               시간
             </th>
-            <th className="sticky top-0 left-[56px] z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd text-[0.7rem] text-mu text-center font-bold" style={{ minWidth: 60 }}>
+            <th className="sticky top-0 left-[56px] z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd text-[0.72rem] text-tx text-center font-bold">
               트레이너
             </th>
             {days.map((d, i) => {
@@ -555,11 +568,11 @@ function WeekAllView({
               return (
                 <th
                   key={ds}
-                  className="sticky top-0 z-[3] bg-sf2 px-1.5 py-2 border-b-2 border-r border-r-bd text-[0.7rem] text-center whitespace-nowrap"
-                  style={{ width: colW, borderBottomColor: isT ? "var(--acc)" : "var(--bd)" }}
+                  className="sticky top-0 z-[3] bg-sf2 px-1.5 py-2 border-b-2 border-r border-r-bd text-center whitespace-nowrap"
+                  style={{ borderBottomColor: isT ? "var(--acc)" : "var(--bd)" }}
                 >
-                  <div className={`font-black text-[0.8rem] ${isT ? "text-acc" : ""}`}>{DAYS_SHORT[i]}</div>
-                  <div className="text-[0.6rem] text-mu mt-0.5 flex items-center justify-center gap-1">
+                  <div className={`font-black text-[0.82rem] ${isT ? "text-acc" : "text-tx"}`}>{DAYS_SHORT[i]}</div>
+                  <div className="text-[0.64rem] text-mu mt-0.5 flex items-center justify-center gap-1">
                     {d.getMonth() + 1}/{d.getDate()}
                     <MemoBar ds={ds} compact />
                   </div>
@@ -574,16 +587,16 @@ function WeekAllView({
               <tr key={h + t.id}>
                 {ti === 0 && (
                   <td
-                    className="sticky left-0 z-[2] bg-sf px-1 text-[0.7rem] text-mu font-semibold border-r border-r-bd border-b border-b-bd text-center align-middle font-bebas tracking-wider"
-                    style={{ minWidth: 56 }}
+                    className="sticky left-0 z-[2] bg-sf px-1 text-[0.78rem] text-tx font-semibold border-r border-r-bd border-b border-b-bd text-center align-middle font-bebas tracking-wider"
                     rowSpan={TRAINERS.length}
+                    style={{ height: rowMin * TRAINERS.length }}
                   >
                     {h}
                   </td>
                 )}
                 <td
-                  className="sticky left-[56px] z-[2] bg-sf px-1 py-1 text-[0.68rem] font-bold border-r border-r-bd border-b border-b-bd whitespace-nowrap text-center"
-                  style={{ minWidth: 60, color: t.hex }}
+                  className="sticky left-[56px] z-[2] bg-sf px-1 py-1 text-[0.72rem] font-bold border-r border-r-bd border-b border-b-bd whitespace-nowrap text-center"
+                  style={{ color: t.hex, height: rowMin }}
                 >
                   {t.name}
                 </td>
@@ -604,8 +617,8 @@ function WeekAllView({
                   return (
                     <td
                       key={ds}
-                      className={`p-[2px] border-r border-r-bd border-b border-b-bd align-top cursor-pointer hover:bg-white/[0.04] ${cls}`}
-                      style={{ width: colW, minWidth: colW, height: rowMin }}
+                      className={`p-[2px] border-r border-r-bd border-b border-b-bd align-middle cursor-pointer hover:bg-white/[0.04] ${cls}`}
+                      style={{ height: rowMin }}
                       onClick={(e) => {
                         const tgt = e.target as HTMLElement;
                         if (tgt.dataset.stop === "1") return;
@@ -617,18 +630,11 @@ function WeekAllView({
                       }}
                     >
                       {isB ? (
-                        <button
-                          data-stop="1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            mutate("차단 해제", (d) => {
-                              delete d.blocks[`${ds}_${t.id}_${h}`];
-                            });
-                          }}
-                          className="w-full h-full flex items-center justify-center bg-transparent border-none text-[rgba(220,175,0,0.9)] text-[0.6rem] font-bold"
-                        >
-                          차단 해제
-                        </button>
+                        <BlockedCellContent db={db} ds={ds} time={h} tid={t.id} onUnblock={() => {
+                          mutate("차단 해제", (d) => {
+                            delete d.blocks[`${ds}_${t.id}_${h}`];
+                          });
+                        }} />
                       ) : sess ? (
                         <SessionCard ds={ds} sess={sess} tid={t.id} />
                       ) : null}
@@ -642,5 +648,57 @@ function WeekAllView({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function BlockedCellContent({
+  db,
+  ds,
+  time,
+  tid,
+  onUnblock,
+}: {
+  db: DB;
+  ds: string;
+  time: string;
+  tid: TrainerId;
+  onUnblock: () => void;
+}) {
+  const dow = new Date(ds + "T00:00:00").getDay();
+  const dowA = dow === 0 ? 7 : dow;
+  const fb = (db.fixedBlocks || []).find(
+    (b) =>
+      b.dayOfWeek === dowA &&
+      (b.tid === "all" || b.tid === tid) &&
+      b.times.includes(time) &&
+      (!b.startDate || ds >= b.startDate) &&
+      (!b.endDate || ds <= b.endDate)
+  );
+  const label = fb?.label;
+
+  if (label) {
+    return (
+      <div
+        className="w-full h-full flex items-center justify-center text-[0.68rem] font-bold"
+        style={{ color: "#d4a800" }}
+        title={`${label} (고정 차단)`}
+      >
+        {label}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      data-stop="1"
+      onClick={(e) => {
+        e.stopPropagation();
+        onUnblock();
+      }}
+      className="w-full h-full flex items-center justify-center bg-transparent border-none text-[0.62rem] font-bold"
+      style={{ color: "#d4a800" }}
+    >
+      차단 해제
+    </button>
   );
 }
