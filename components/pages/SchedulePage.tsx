@@ -291,8 +291,40 @@ function SingleTrainerView({
     ? Math.floor((containerW - stickyW) / days.length)
     : 90;
   const colMin = Math.max(48, Math.round(defaultDataW * zoom));
+
+  const dayCounts = days.map((d) => {
+    const ds = fmtDateToISO(d);
+    return getSessionsForDate(db, ds).filter((s) => {
+      if (s.tid !== tid) return false;
+      const st = db.att[`${ds}_${s.id}`];
+      return st !== "precancel" && st !== "daycancel" && st !== "absent";
+    }).length;
+  });
+  const weekTotal = dayCounts.reduce((a, b) => a + b, 0);
+
   return (
-    <div ref={wrapRef} className="overflow-x-auto rounded-xl border border-bd w-full">
+    <>
+      <div className="flex items-center gap-2 mb-2 flex-wrap px-0.5">
+        <span
+          className="px-2.5 py-1 rounded-lg font-black text-[0.82rem] md:text-[0.92rem] text-black"
+          style={{ background: t.hex }}
+        >
+          {t.name} · 이번 주 {weekTotal}회
+        </span>
+        <div className="flex gap-1 flex-wrap text-[0.72rem] md:text-[0.82rem] text-mu">
+          {days.map((d, i) => (
+            <span
+              key={fmtDateToISO(d)}
+              className={`px-2 py-0.5 rounded bg-sf2 border border-bd ${
+                dayCounts[i] > 0 ? "text-tx" : "text-mu"
+              }`}
+            >
+              {DAYS_SHORT[i]} <span className="font-black text-acc">{dayCounts[i]}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <div ref={wrapRef} className="overflow-x-auto rounded-xl border border-bd w-full">
       <div
         className="grid bg-sf"
         style={{
@@ -361,6 +393,7 @@ function SingleTrainerView({
         ))}
       </div>
     </div>
+    </>
   );
 }
 
