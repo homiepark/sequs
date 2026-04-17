@@ -22,6 +22,7 @@ type Action =
   | "restore"
   | "rebook"
   | "del"
+  | "delOnce"
   | "unblock";
 
 export function ActionMenu({
@@ -106,8 +107,9 @@ export function ActionMenu({
     }
     if (a === "del" && sess) {
       if (sess.isFixed) {
-        if (!confirm("고정일정 전체를 삭제할까요?")) return onClose();
-        mutate("고정일정 삭제", (d) => {
+        if (!confirm("⚠️ 고정일정 전체를 삭제합니다 (매주 반복 전부).\n\n이번 날짜만 빼려면 취소 후 '이번만 삭제'를 선택하세요.\n\n전체 삭제 진행할까요?"))
+          return onClose();
+        mutate("고정일정 전체 삭제", (d) => {
           d.fixedSchedules = d.fixedSchedules.filter((f) => f.id !== sess.fixedId);
         });
       } else {
@@ -116,9 +118,22 @@ export function ActionMenu({
         });
       }
     }
+    if (a === "delOnce" && sess && sess.isFixed && sess.fixedId) {
+      mutate("이번만 삭제", (d) => {
+        const f = d.fixedSchedules.find((x) => x.id === sess.fixedId);
+        if (f) {
+          f.skippedDates = [...(f.skippedDates || []), date];
+        }
+        delete d.att[`${date}_${sess.id}`];
+        d.cancelHistory = (d.cancelHistory || []).filter(
+          (h) => !(h.date === date && h.time === time && h.tid === tid && h.mid === sess.mid)
+        );
+      });
+    }
     onClose();
   }
 
+  const isFixed = !!sess?.isFixed;
   const allItems: { a: Action; label: string; icon: string; cls?: string; show: boolean }[] = [
     { a: "book", label: "수업 예약", icon: "📅", show: !hasS && !isB },
     { a: "block", label: "시간 차단", icon: "🚫", cls: "text-[#c9a800]", show: !hasS && !isB },
@@ -127,7 +142,8 @@ export function ActionMenu({
     { a: "daycan", label: "당일 캔슬", icon: "❌", cls: "text-red", show: hasS && !isCan },
     { a: "restore", label: "캔슬 취소", icon: "↩️", cls: "text-green", show: hasS && isCan },
     { a: "rebook", label: "이 자리 재예약", icon: "🔄", show: hasS && isCan },
-    { a: "del", label: "수업 삭제", icon: "🗑", cls: "text-red", show: hasS },
+    { a: "delOnce", label: "이번만 삭제", icon: "🗑", cls: "text-red", show: hasS && isFixed },
+    { a: "del", label: isFixed ? "고정 전체 삭제" : "수업 삭제", icon: "🗑", cls: "text-red", show: hasS },
     { a: "unblock", label: "차단 해제", icon: "✅", cls: "text-[#c9a800]", show: isB },
   ];
   const items = allItems.filter((i) => i.show);

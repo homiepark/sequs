@@ -33,6 +33,7 @@ export interface FixedSchedule {
   time: string;
   startDate?: string | null;
   endDate?: string | null;
+  skippedDates?: string[];
 }
 
 export type AttStatus = "present" | "absent" | "precancel" | "daycancel";
@@ -118,6 +119,7 @@ export function getSessionsForDate(db: DB, ds: string): Session[] {
       if (f.dayOfWeek !== dowA) return false;
       if (f.startDate && ds < f.startDate) return false;
       if (f.endDate && ds > f.endDate) return false;
+      if (f.skippedDates && f.skippedDates.includes(ds)) return false;
       return true;
     })
     .map((f) => ({
@@ -132,6 +134,18 @@ export function getSessionsForDate(db: DB, ds: string): Session[] {
     }))
     .filter((f) => !overridden.has(f.tid + "_" + f.time));
   return [...real, ...fixed];
+}
+
+export function getAttStatus(db: DB, sess: Session): AttStatus | "auto" {
+  const k = `${sess.date}_${sess.id}`;
+  const v = db.att[k];
+  if (v) return v;
+  return "auto";
+}
+
+export function isCountedAsPresent(db: DB, sess: Session): boolean {
+  const v = getAttStatus(db, sess);
+  return v === "present" || v === "auto";
 }
 
 export function fmtDateToISO(d: Date): string {

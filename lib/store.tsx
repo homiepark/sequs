@@ -10,10 +10,12 @@ const MAX_HISTORY = 50;
 
 export type SyncState = "local" | "syncing" | "error";
 
+export type MutateFn = (label: string, updater: (draft: DB) => void) => void;
+
 interface StoreContext {
   db: DB;
   sync: SyncState;
-  mutate: (label: string, updater: (draft: DB) => void) => void;
+  mutate: MutateFn;
   undo: () => boolean;
   canUndo: boolean;
   lastAction: string | null;

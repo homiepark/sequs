@@ -4,12 +4,37 @@ import { useStore } from "@/lib/store";
 import {
   AVATAR_COLORS,
   TRAINERS,
+  getSessionsForDate,
   getTrainer,
+  type DB,
   type Member,
   type TrainerId,
 } from "@/lib/types";
 import { TrainerTabs } from "../ui/TrainerTabs";
 import { Modal } from "../ui/Modal";
+
+function uniqueDatesForMember(db: DB, mid: string): string[] {
+  const dates = new Set<string>();
+  db.sessions.filter((s) => s.mid === mid).forEach((s) => dates.add(s.date));
+  // For fixed schedules: produce dates from startDate up to today
+  const today = new Date().toISOString().slice(0, 10);
+  db.fixedSchedules
+    .filter((f) => f.mid === mid)
+    .forEach((f) => {
+      const start = f.startDate || "2020-01-01";
+      const end = f.endDate && f.endDate < today ? f.endDate : today;
+      const s = new Date(start + "T00:00:00");
+      const e = new Date(end + "T00:00:00");
+      for (let x = new Date(s); x <= e; x.setDate(x.getDate() + 1)) {
+        const dow = x.getDay() === 0 ? 7 : x.getDay();
+        if (dow !== f.dayOfWeek) continue;
+        const ds = x.toISOString().slice(0, 10);
+        if (f.skippedDates?.includes(ds)) continue;
+        dates.add(ds);
+      }
+    });
+  return Array.from(dates);
+}
 
 export function MembersPage() {
   const { db, mutate } = useStore();
@@ -28,33 +53,46 @@ export function MembersPage() {
   }, [db.members, q, trF]);
 
   function cntAtt(mid: string, prefix: string | null) {
-    return Object.entries(db.att).filter(([k, v]) => {
-      if (v !== "present") return false;
-      const [date, sid] = k.split("_");
-      if (prefix && !date.startsWith(prefix)) return false;
-      const s = db.sessions.find((x) => x.id === sid);
-      if (s) return s.mid === mid;
-      const fidMatch = k.match(/^[^_]+_fx_([^_]+)_/);
-      if (fidMatch) {
-        const f = db.fixedSchedules.find((x) => x.id === fidMatch[1]);
-        return f && f.mid === mid;
+    let total = 0;
+    const today = new Date().toISOString().slice(0, 10);
+    const range = prefix
+      ? (() => {
+          const [yy, mm] = prefix.split("-").map(Number);
+          const dim = new Date(yy, mm, 0).getDate();
+          return Array.from({ length: dim }, (_, i) => `${prefix}-${String(i + 1).padStart(2, "0")}`);
+        })()
+      : null;
+
+    const iterate = range
+      ? range.filter((ds) => ds <= today)
+      : // cumulative: iterate all dates present in sessions + fixedSchedules (limited by today)
+        uniqueDatesForMember(db, mid).filter((ds) => ds <= today);
+
+    for (const ds of iterate) {
+      const sess = getSessionsForDate(db, ds).filter((s) => s.mid === mid);
+      for (const s of sess) {
+        const st = db.att[`${ds}_${s.id}`];
+        if (st !== "precancel" && st !== "daycancel" && st !== "absent") total++;
       }
-      return false;
-    }).length;
+    }
+    return total;
   }
 
   function lastVisit(mid: string) {
-    const dates = Object.entries(db.att)
-      .filter(([k, v]) => {
-        if (v !== "present") return false;
-        const sid = k.split("_")[1];
-        const s = db.sessions.find((x) => x.id === sid);
-        return s && s.mid === mid;
-      })
-      .map(([k]) => k.split("_")[0])
+    const today = new Date().toISOString().slice(0, 10);
+    const dates = uniqueDatesForMember(db, mid)
+      .filter((ds) => ds <= today)
       .sort()
       .reverse();
-    return dates[0] ? dates[0].slice(5).replace("-", "/") : null;
+    for (const ds of dates) {
+      const sess = getSessionsForDate(db, ds).find((s) => s.mid === mid);
+      if (!sess) continue;
+      const st = db.att[`${ds}_${sess.id}`];
+      if (st !== "precancel" && st !== "daycancel" && st !== "absent") {
+        return ds.slice(5).replace("-", "/");
+      }
+    }
+    return null;
   }
 
   return (
