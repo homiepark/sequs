@@ -611,7 +611,7 @@ function WeekAllView({
         className="bg-sf grid"
         style={{
           gridTemplateColumns,
-          gridAutoRows: `${rowMin}px`,
+          gridAutoRows: `minmax(${rowMin}px, max-content)`,
           width: "max-content",
         }}
       >
