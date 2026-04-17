@@ -14,24 +14,7 @@ export function SessionCard({ ds, sess, tid }: { ds: string; sess: Session; tid:
   const displayName = sess.customName || (mem ? mem.name : "?");
   const isHalf = sess.time && sess.time.endsWith(":30");
 
-  if (isPreCan || isDayCan) {
-    const label = isPreCan ? "사전캔슬" : "당일캔슬";
-    const color = isPreCan ? "var(--orange)" : "var(--red)";
-    return (
-      <div
-        className="rounded-[5px] px-1.5 py-1 min-h-[44px] flex flex-col justify-center relative overflow-hidden"
-        style={{ background: `${color}1A`, border: `1.5px dashed ${color}` }}
-      >
-        <div className="text-[0.8rem] font-black" style={{ color, textDecoration: "line-through" }}>
-          {displayName}
-          {isHalf && <span className="text-[0.58rem] font-black opacity-75 ml-1">·30</span>}
-        </div>
-        <div className="text-[0.55rem] font-bold mt-0.5" style={{ color, opacity: 0.85 }}>
-          {label}
-        </div>
-      </div>
-    );
-  }
+  if (isPreCan || isDayCan) return null;
 
   const cardStyle = { background: t.hex };
   const cls = "relative flex flex-col justify-center rounded-[5px] px-1.5 py-1 min-h-[48px] cursor-pointer overflow-visible group";

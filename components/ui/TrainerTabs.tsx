@@ -4,16 +4,20 @@ import { TRAINERS } from "@/lib/types";
 export function TrainerTabs({
   value,
   onChange,
+  hideAll = false,
 }: {
   value: string;
   onChange: (v: string) => void;
+  hideAll?: boolean;
 }) {
   return (
     <div className="flex gap-1.5 mb-3 flex-wrap">
-      <TabButton active={value === "all"} onClick={() => onChange("all")}>
-        <span className="w-[7px] h-[7px] rounded-full bg-acc" />
-        전체
-      </TabButton>
+      {!hideAll && (
+        <TabButton active={value === "all"} onClick={() => onChange("all")}>
+          <span className="w-[7px] h-[7px] rounded-full bg-acc" />
+          전체
+        </TabButton>
+      )}
       {TRAINERS.map((t) => (
         <TabButton
           key={t.id}

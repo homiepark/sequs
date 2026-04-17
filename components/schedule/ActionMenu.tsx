@@ -154,9 +154,12 @@ export function ActionMenu({
     return (
       <>
         <div className="fixed inset-0 bg-black/55 z-[500]" onClick={onClose} />
-        <div className="fixed bottom-0 left-0 right-0 z-[600] bg-sf rounded-t-[18px] border-t border-bd pt-3 pb-9 anim-fade-up">
+        <div
+          className="fixed bottom-0 left-0 right-0 z-[600] bg-sf rounded-t-[18px] border-t border-bd pt-3 anim-fade-up max-h-[85vh] overflow-y-auto"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 36px)" }}
+        >
           <div className="w-9 h-1 bg-bd rounded-sm mx-auto mb-3.5" />
-          <div className="px-4.5 pb-3 border-b border-bd mb-1.5">
+          <div className="px-4 pb-3 border-b border-bd mb-1.5">
             <div className="font-bebas text-[1.35rem] tracking-wider" style={{ color: t?.hex || "var(--acc)" }}>{time}</div>
             <div className="font-bold text-[0.95rem] mt-0.5">
               {hasS ? mem?.name || sess?.customName || "?" : t?.name + " 트레이너"}
@@ -165,11 +168,11 @@ export function ActionMenu({
               {date}{sess?.isFixed ? " · 고정일정" : ""}
             </div>
           </div>
-          {items.map((b, i) => (
+          {items.map((b) => (
             <button
               key={b.a}
               onClick={() => run(b.a)}
-              className={`flex items-center gap-3 w-full py-3.5 px-4.5 bg-transparent border-none text-[0.92rem] font-semibold text-left cursor-pointer active:bg-sf2 ${b.cls || "text-tx"}`}
+              className={`flex items-center gap-3 w-full py-3.5 px-4 bg-transparent border-none text-[0.92rem] font-semibold text-left cursor-pointer active:bg-sf2 ${b.cls || "text-tx"}`}
             >
               <span className="text-[1.1rem] w-6 text-center">{b.icon}</span>
               {b.label}

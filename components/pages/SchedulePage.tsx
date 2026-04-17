@@ -98,6 +98,7 @@ export function SchedulePage() {
       {viewMode === "single" && (
         <>
           <TrainerTabs
+            hideAll
             value={selTr}
             onChange={(v) => {
               if (v !== "all") setSelTr(v as TrainerId);
