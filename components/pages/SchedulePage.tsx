@@ -429,7 +429,7 @@ function Cell({
       className={`p-[3px] border-b border-b-bd cursor-pointer flex flex-col gap-0.5 ${
         isB ? "blocked-pattern cursor-default" : "hover:bg-white/[0.04]"
       } ${extraCls || ""}`}
-      style={{ minHeight: rowMin || 56 }}
+      style={{ minHeight: rowMin || 56, background: isB ? undefined : "var(--sf)" }}
       onClick={(e) => {
         const tgt = e.target as HTMLElement;
         if (tgt.dataset.stop === "1") return;
