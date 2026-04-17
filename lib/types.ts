@@ -12,6 +12,7 @@ export interface Member {
   phone: string;
   tid: TrainerId;
   tids?: TrainerId[];
+  memo?: string;
 }
 
 export function memberTrainers(m: Member): TrainerId[] {
@@ -78,6 +79,11 @@ export interface DB {
   blocks: Record<string, boolean>;
   cancelHistory: CancelHistoryEntry[];
   memos?: Record<string, string>;
+  sessionMemos?: Record<string, string>;
+}
+
+export function sessionSlotKey(ds: string, tid: TrainerId, time: string): string {
+  return `${ds}_${tid}_${time}`;
 }
 
 export const TRAINERS: Trainer[] = [
@@ -109,6 +115,7 @@ export function emptyDB(): DB {
     blocks: {},
     cancelHistory: [],
     memos: {},
+    sessionMemos: {},
   };
 }
 
@@ -128,6 +135,10 @@ export function normalizeDB(raw: unknown): DB {
     blocks: r.blocks && typeof r.blocks === "object" ? (r.blocks as Record<string, boolean>) : {},
     cancelHistory: Array.isArray(r.cancelHistory) ? (r.cancelHistory as CancelHistoryEntry[]) : [],
     memos: r.memos && typeof r.memos === "object" ? (r.memos as Record<string, string>) : {},
+    sessionMemos:
+      r.sessionMemos && typeof r.sessionMemos === "object"
+        ? (r.sessionMemos as Record<string, string>)
+        : {},
   };
 }
 

@@ -1,6 +1,12 @@
 "use client";
 import { useStore } from "@/lib/store";
-import { getMember, getTrainer, type Session, type TrainerId } from "@/lib/types";
+import {
+  getMember,
+  getTrainer,
+  sessionSlotKey,
+  type Session,
+  type TrainerId,
+} from "@/lib/types";
 
 export function SessionCard({ ds, sess, tid }: { ds: string; sess: Session; tid: TrainerId }) {
   const { db, mutate } = useStore();
@@ -13,6 +19,15 @@ export function SessionCard({ ds, sess, tid }: { ds: string; sess: Session; tid:
   const isAbsent = st === "absent";
   const displayName = sess.customName || (mem ? mem.name : "?");
   const isHalf = sess.time && sess.time.endsWith(":30");
+  const sessionMemo = (db.sessionMemos || {})[sessionSlotKey(ds, tid, sess.time)]?.trim();
+  const memberMemo = mem?.memo?.trim();
+  const memoIndicator = sessionMemo ? "📝" : memberMemo ? "💬" : null;
+  const memoTip = [
+    memberMemo ? `💬 ${memberMemo}` : null,
+    sessionMemo ? `📝 ${sessionMemo}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   if (isPreCan || isDayCan) return null;
 
@@ -31,6 +46,14 @@ export function SessionCard({ ds, sess, tid }: { ds: string; sess: Session; tid:
         )}
         {isAbsent && (
           <span className="inline-block rounded px-1 text-[0.56rem] font-bold tracking-wider bg-red text-white">결석</span>
+        )}
+        {memoIndicator && (
+          <span
+            title={memoTip}
+            className="inline-flex items-center justify-center rounded px-1 text-[0.6rem] font-bold bg-black/30 text-black ml-auto"
+          >
+            {memoIndicator}
+          </span>
         )}
       </div>
       <button

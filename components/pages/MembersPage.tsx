@@ -181,6 +181,11 @@ export function MembersPage() {
                     <div className="text-[0.6rem] text-mu mt-0.5">마지막 방문</div>
                   </div>
                 </div>
+                {m.memo?.trim() && (
+                  <div className="mt-2 px-2 py-1.5 bg-[rgba(232,255,71,0.06)] border border-acc/30 rounded-md text-[0.72rem] text-tx whitespace-pre-wrap leading-relaxed">
+                    💬 {m.memo}
+                  </div>
+                )}
                 <div className="flex gap-1.5 mt-2.5">
                   <button
                     onClick={() => setEditing(m)}
@@ -234,6 +239,7 @@ function MemberModal({
   const [name, setName] = useState(member?.name || "");
   const [phone, setPhone] = useState(member?.phone || "");
   const [tids, setTids] = useState<TrainerId[]>(member ? memberTrainers(member) : []);
+  const [memo, setMemo] = useState(member?.memo || "");
 
   function toggleTid(id: TrainerId) {
     setTids((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -250,6 +256,7 @@ function MemberModal({
           m.phone = phone;
           m.tid = tids[0];
           m.tids = tids;
+          m.memo = memo.trim();
         }
       });
     } else {
@@ -260,6 +267,7 @@ function MemberModal({
           phone,
           tid: tids[0],
           tids,
+          memo: memo.trim(),
         });
       });
     }
@@ -309,6 +317,18 @@ function MemberModal({
             );
           })}
         </div>
+      </div>
+      <div className="mb-3">
+        <label className="block text-[0.71rem] text-mu mb-1 font-medium">
+          회원 메모 <span className="text-[0.68rem] opacity-70">(부상 · 선호 · 주의사항 등)</span>
+        </label>
+        <textarea
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          rows={3}
+          placeholder="예: 무릎 수술 이력, 스쿼트 주의"
+          className="w-full bg-sf2 border border-bd text-tx px-2.5 py-2 rounded-lg text-[0.84rem] outline-none focus:border-acc resize-none"
+        />
       </div>
       <div className="flex gap-2 mt-3.5">
         <button onClick={onClose} className="flex-1 py-2.5 rounded-lg bg-sf2 text-tx font-bold text-[0.83rem] border-none">

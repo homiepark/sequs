@@ -20,6 +20,7 @@ import { ActionMenu, type ActionContext } from "../schedule/ActionMenu";
 import { SessionModal } from "../schedule/SessionModal";
 import { BulkBlockModal } from "../schedule/BulkBlockModal";
 import { MemoBar } from "../schedule/MemoBar";
+import { SessionMemoModal } from "../schedule/SessionMemoModal";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -39,6 +40,12 @@ export function SchedulePage() {
     existing: Session | null;
   } | null>(null);
   const [blockModal, setBlockModal] = useState<{ date: string; time: string; tid: TrainerId } | null>(null);
+  const [memoModal, setMemoModal] = useState<{
+    date: string;
+    time: string;
+    tid: TrainerId;
+    sess: Session | null;
+  } | null>(null);
 
   const now = useMemo(() => new Date(), []);
   const days = useMemo(() => weekDates(weekOff), [weekOff]);
@@ -182,6 +189,15 @@ export function SchedulePage() {
             setBlockModal({ date: action.date, time: action.time, tid: action.tid });
             setAction(null);
           }}
+          onMemo={() => {
+            setMemoModal({
+              date: action.date,
+              time: action.time,
+              tid: action.tid,
+              sess: action.sess,
+            });
+            setAction(null);
+          }}
         />
       )}
 
@@ -201,6 +217,16 @@ export function SchedulePage() {
           time={blockModal.time}
           tid={blockModal.tid}
           onClose={() => setBlockModal(null)}
+        />
+      )}
+
+      {memoModal && (
+        <SessionMemoModal
+          date={memoModal.date}
+          time={memoModal.time}
+          tid={memoModal.tid}
+          sess={memoModal.sess}
+          onClose={() => setMemoModal(null)}
         />
       )}
     </div>

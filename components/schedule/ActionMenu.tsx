@@ -23,18 +23,21 @@ type Action =
   | "rebook"
   | "del"
   | "delOnce"
-  | "unblock";
+  | "unblock"
+  | "memo";
 
 export function ActionMenu({
   ctx,
   onClose,
   onBookOrEdit,
   onBlock,
+  onMemo,
 }: {
   ctx: ActionContext;
   onClose: () => void;
   onBookOrEdit: (mode: "book" | "edit", existing: Session | null) => void;
   onBlock: () => void;
+  onMemo: () => void;
 }) {
   const { db, mutate } = useStore();
   const isMobile = useIsMobile();
@@ -59,6 +62,10 @@ export function ActionMenu({
     }
     if (a === "block") {
       onBlock();
+      return;
+    }
+    if (a === "memo") {
+      onMemo();
       return;
     }
     if (a === "unblock") {
@@ -143,10 +150,12 @@ export function ActionMenu({
   }
 
   const isFixed = !!sess?.isFixed;
+  const hasMemo = !!(db.sessionMemos || {})[`${date}_${tid}_${time}`]?.trim();
   const allItems: { a: Action; label: string; icon: string; cls?: string; show: boolean }[] = [
     { a: "book", label: "수업 예약", icon: "📅", show: !hasS && !isB },
     { a: "block", label: "시간 차단", icon: "🚫", cls: "text-[#c9a800]", show: !hasS && !isB },
     { a: "edit", label: "이번만 수정", icon: "✏️", cls: "text-orange", show: hasS && !isCan },
+    { a: "memo", label: hasMemo ? "메모 수정" : "메모 작성", icon: "📝", show: hasS },
     { a: "precan", label: "사전 캔슬", icon: "📵", cls: "text-orange", show: hasS && !isCan },
     { a: "daycan", label: "당일 캔슬", icon: "❌", cls: "text-red", show: hasS && !isCan },
     { a: "restore", label: "캔슬 취소", icon: "↩️", cls: "text-green", show: hasS && isCan },
