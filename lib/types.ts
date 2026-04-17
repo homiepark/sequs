@@ -80,7 +80,26 @@ export interface DB {
   cancelHistory: CancelHistoryEntry[];
   memos?: Record<string, string>;
   sessionMemos?: Record<string, string>;
+  monthlyExtras?: Record<string, { volansCount?: number }>;
 }
+
+export interface SalaryConfig {
+  sessionPrice: number;
+  laborIncome: number;
+  insurance: number;
+  retirement: number;
+  volansPrice: number;
+}
+
+export const SALARY_CONFIGS: Partial<Record<TrainerId, SalaryConfig>> = {
+  t2: {
+    sessionPrice: 55000,
+    laborIncome: 1204000,
+    insurance: 61000,
+    retirement: 120400,
+    volansPrice: 18000,
+  },
+};
 
 export function sessionSlotKey(ds: string, tid: TrainerId, time: string): string {
   return `${ds}_${tid}_${time}`;
@@ -116,6 +135,7 @@ export function emptyDB(): DB {
     cancelHistory: [],
     memos: {},
     sessionMemos: {},
+    monthlyExtras: {},
   };
 }
 
@@ -138,6 +158,10 @@ export function normalizeDB(raw: unknown): DB {
     sessionMemos:
       r.sessionMemos && typeof r.sessionMemos === "object"
         ? (r.sessionMemos as Record<string, string>)
+        : {},
+    monthlyExtras:
+      r.monthlyExtras && typeof r.monthlyExtras === "object"
+        ? (r.monthlyExtras as Record<string, { volansCount?: number }>)
         : {},
   };
 }

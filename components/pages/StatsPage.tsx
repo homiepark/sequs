@@ -2,10 +2,13 @@
 import { useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
+  SALARY_CONFIGS,
   TRAINERS,
   getMember,
   getSessionsForDate,
+  getTrainer,
   type Session,
+  type TrainerId,
 } from "@/lib/types";
 
 export function StatsPage() {
@@ -125,6 +128,8 @@ export function StatsPage() {
         <KPI label="당일캔슬" value={daycan.length} color="text-acc2" />
       </div>
 
+      <SalarySection yr={yr} mo={mo} present={present} trF={trF} />
+
       <div>
         {trainersToShow.map((t) => {
           const tp = present.filter((s) => s.tid === t.id);
@@ -196,6 +201,162 @@ export function StatsPage() {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function won(n: number): string {
+  return n.toLocaleString("ko-KR") + "원";
+}
+
+function SalarySection({
+  yr,
+  mo,
+  present,
+  trF,
+}: {
+  yr: number;
+  mo: number;
+  present: Session[];
+  trF: string;
+}) {
+  const { db, mutate } = useStore();
+  const configured = (Object.keys(SALARY_CONFIGS) as TrainerId[]).filter((tid) => {
+    if (trF && trF !== tid) return false;
+    return !!SALARY_CONFIGS[tid];
+  });
+  if (!configured.length) return null;
+
+  const monthKey = `${yr}-${String(mo).padStart(2, "0")}`;
+
+  return (
+    <div className="mb-5">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="font-bold text-[0.9rem] md:text-[1.05rem]">💰 급여 정산</span>
+        <span className="text-[0.72rem] text-mu">{monthKey}</span>
+      </div>
+      <div className="flex flex-col gap-3">
+        {configured.map((tid) => {
+          const t = getTrainer(tid)!;
+          const cfg = SALARY_CONFIGS[tid]!;
+          const sessions = present.filter((s) => s.tid === tid).length;
+          const key = `${monthKey}_${tid}`;
+          const extras = (db.monthlyExtras || {})[key] || {};
+          const volansCount = extras.volansCount || 0;
+
+          const sessionFee = sessions * cfg.sessionPrice;
+          const afterDeduction = cfg.laborIncome - cfg.insurance - cfg.retirement;
+          const volansSales = volansCount * cfg.volansPrice;
+          const businessIncome = sessionFee - cfg.laborIncome + volansSales;
+          const total = afterDeduction + businessIncome;
+
+          function setVolans(n: number) {
+            mutate("볼란스 수 변경", (d) => {
+              d.monthlyExtras = d.monthlyExtras || {};
+              d.monthlyExtras[key] = { ...(d.monthlyExtras[key] || {}), volansCount: n };
+            });
+          }
+
+          function copy() {
+            const text = [
+              `${t.name} · ${monthKey}`,
+              `수업수\t${sessions}`,
+              `수업 단가\t${cfg.sessionPrice}`,
+              `세션료\t${sessionFee}`,
+              `근로소득\t${cfg.laborIncome}`,
+              `4대보험\t${cfg.insurance}`,
+              `퇴직금\t${cfg.retirement}`,
+              `공제 후\t${afterDeduction}`,
+              `볼란스 수\t${volansCount}`,
+              `볼란스 매출\t${volansSales}`,
+              `사업소득\t${businessIncome}`,
+              `총급여\t${total}`,
+              `세금계산서 발행\t${businessIncome}`,
+            ].join("\n");
+            navigator.clipboard.writeText(text);
+          }
+
+          return (
+            <div key={tid} className="bg-sf border rounded-xl p-4" style={{ borderColor: t.hex + "55" }}>
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: t.hex }} />
+                  <span className="font-bold text-[0.95rem] md:text-[1.1rem]" style={{ color: t.hex }}>
+                    {t.name}
+                  </span>
+                  <span className="text-[0.76rem] text-mu">수업 {sessions}회</span>
+                </div>
+                <button
+                  onClick={copy}
+                  className="bg-sf2 border border-bd text-tx hover:border-acc hover:text-acc px-2.5 py-1 rounded-md text-[0.74rem] font-bold"
+                >
+                  📋 엑셀 복사
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <Stat label={`수업료 (${won(cfg.sessionPrice)} × ${sessions})`} value={won(sessionFee)} />
+                <Stat label="근로소득" value={won(cfg.laborIncome)} muted />
+                <Stat label="4대보험" value={`− ${won(cfg.insurance)}`} muted />
+                <Stat label="퇴직금" value={`− ${won(cfg.retirement)}`} muted />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-3 items-end">
+                <div className="bg-sf2 rounded-lg px-3 py-2">
+                  <div className="text-[0.68rem] text-mu mb-0.5">볼란스 판매</div>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      value={volansCount}
+                      onChange={(e) => setVolans(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-14 bg-sf border border-bd text-tx px-1.5 py-1 rounded text-[0.86rem] font-bold text-center"
+                    />
+                    <span className="text-[0.74rem] text-mu">× {won(cfg.volansPrice)}</span>
+                  </div>
+                  <div className="text-[0.78rem] font-bold text-tx mt-0.5">
+                    = {won(volansSales)}
+                  </div>
+                </div>
+                <Stat label="공제 후 (근로)" value={won(afterDeduction)} />
+              </div>
+
+              <div className="bg-sf2 rounded-lg px-3 py-2.5 mb-2">
+                <div className="text-[0.7rem] text-mu mb-1">
+                  사업소득 = 세션료 − 근로소득 + 볼란스 매출
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-tx">사업소득</span>
+                  <span className="font-bebas text-[1.3rem] text-orange">
+                    {won(businessIncome)}
+                  </span>
+                </div>
+                <div className="text-[0.7rem] text-mu mt-1">
+                  ↳ 세금계산서 발행 금액 (원천세 3.3% 대상)
+                </div>
+              </div>
+
+              <div className="bg-acc/10 border border-acc/40 rounded-lg px-3 py-3 flex items-center justify-between">
+                <span className="font-bold text-acc">총 급여</span>
+                <span className="font-bebas text-[1.6rem] tracking-wider text-acc">
+                  {won(total)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+  return (
+    <div className="bg-sf2 rounded-lg px-3 py-2">
+      <div className="text-[0.68rem] text-mu mb-0.5">{label}</div>
+      <div className={`font-bold ${muted ? "text-mu text-[0.8rem]" : "text-tx text-[0.88rem]"}`}>
+        {value}
       </div>
     </div>
   );
