@@ -87,6 +87,18 @@ export function emptyDB(): DB {
   };
 }
 
+export function normalizeDB(raw: unknown): DB {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  return {
+    members: Array.isArray(r.members) ? (r.members as Member[]) : [],
+    sessions: Array.isArray(r.sessions) ? (r.sessions as Session[]) : [],
+    fixedSchedules: Array.isArray(r.fixedSchedules) ? (r.fixedSchedules as FixedSchedule[]) : [],
+    att: r.att && typeof r.att === "object" ? (r.att as Record<string, AttStatus>) : {},
+    blocks: r.blocks && typeof r.blocks === "object" ? (r.blocks as Record<string, boolean>) : {},
+    cancelHistory: Array.isArray(r.cancelHistory) ? (r.cancelHistory as CancelHistoryEntry[]) : [],
+  };
+}
+
 export function getTrainer(id: string): Trainer | undefined {
   return TRAINERS.find((t) => t.id === id);
 }

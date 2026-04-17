@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { DB } from "./types";
-import { emptyDB } from "./types";
+import { emptyDB, normalizeDB } from "./types";
 import { subscribeDB, writeBackupSnapshot, writeDB } from "./firebase";
 
 const LS_KEY = "seqmv_db_v1";
@@ -31,7 +31,7 @@ function readLocal(): DB {
   if (typeof window === "undefined") return emptyDB();
   try {
     const r = localStorage.getItem(LS_KEY);
-    if (r) return JSON.parse(r);
+    if (r) return normalizeDB(JSON.parse(r));
   } catch {}
   return emptyDB();
 }
@@ -59,13 +59,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try {
       unsub = subscribeDB((remote) => {
         if (remote) {
+          const normalized = normalizeDB(remote);
           remoteApplyingRef.current = true;
           setDb((prev) => {
-            if (JSON.stringify(prev) === JSON.stringify(remote)) return prev;
-            return remote;
+            if (JSON.stringify(prev) === JSON.stringify(normalized)) return prev;
+            return normalized;
           });
           setSync("syncing");
-          writeLocal(remote);
+          writeLocal(normalized);
           setTimeout(() => (remoteApplyingRef.current = false), 0);
         }
       });
@@ -132,8 +133,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const importJSON = useCallback(
     (text: string): boolean => {
       try {
-        const parsed = JSON.parse(text);
-        if (!parsed.members || !Array.isArray(parsed.members)) return false;
+        const parsed = normalizeDB(JSON.parse(text));
         mutate("데이터 가져오기", (d) => {
           Object.assign(d, parsed);
         });
