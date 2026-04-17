@@ -32,6 +32,13 @@ body {
 
 body {
   font-family: var(--font-noto), "Noto Sans KR", sans-serif;
+  text-align: center;
+}
+
+input,
+textarea,
+select {
+  text-align: start;
 }
 
 ::-webkit-scrollbar {

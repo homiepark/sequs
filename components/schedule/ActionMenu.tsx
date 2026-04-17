@@ -69,6 +69,7 @@ export function ActionMenu({
       return;
     }
     if (a === "unblock") {
+      if (!confirm("시간 차단을 해제할까요?")) return onClose();
       mutate("차단 해제", (d) => {
         delete d.blocks[bKey];
         // Also remove matching fixedBlock entry for this slot if any

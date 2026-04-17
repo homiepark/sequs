@@ -727,6 +727,7 @@ function BlockedCellContent({
       data-stop="1"
       onClick={(e) => {
         e.stopPropagation();
+        if (!confirm("시간 차단을 해제할까요?")) return;
         onUnblock();
       }}
       className="w-full h-full flex items-center justify-center bg-transparent border-none text-[0.62rem] font-bold"

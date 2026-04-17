@@ -15,7 +15,7 @@ export function CancelChips({ ds, time, tid }: { ds: string; time: string; tid: 
         <div
           key={h.id}
           title={`${h.cancelledAt} 캔슬`}
-          className={`flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[0.6rem] font-black bg-black/35 w-full leading-[1.3] border-l-2 ${
+          className={`flex items-center gap-1 rounded-[3px] px-1.5 py-0.5 text-[0.6rem] font-black bg-black/35 w-full leading-[1.3] border-l-2 text-left ${
             h.type === "precancel" ? "text-orange border-l-orange" : "text-red border-l-red"
           }`}
         >
