@@ -1,5 +1,6 @@
 "use client";
 import { useStore } from "@/lib/store";
+import { InstallButton } from "./InstallButton";
 import type { Page } from "./App";
 
 const PAGES: { id: Page; label: string }[] = [
@@ -46,6 +47,7 @@ export function Header({ page, onChange }: { page: Page; onChange: (p: Page) => 
           ↩
         </button>
       )}
+      <InstallButton />
     </header>
   );
 }
