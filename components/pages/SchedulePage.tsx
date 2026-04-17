@@ -52,9 +52,7 @@ export function SchedulePage() {
   const now = useMemo(() => new Date(), []);
   const days = useMemo(() => weekDates(weekOff), [weekOff]);
   const gridRef = useRef<HTMLDivElement>(null);
-  const { zoom } = useGridGestures(gridRef, {
-    onSwipe: (dir) => setWeekOff((w) => w + dir),
-  });
+  const { zoom } = useGridGestures(gridRef);
   const weekLabel = `${days[0].getMonth() + 1}/${days[0].getDate()} — ${
     days[5].getMonth() + 1
   }/${days[5].getDate()}`;
@@ -349,6 +347,7 @@ function SingleTrainerView({
                   isB={isB}
                   extraCls={isLast ? "" : "border-r border-r-bd"}
                   rowMin={rowMin}
+                  zoom={zoom}
                   onOpenAction={onOpenAction}
                   mutate={mutate}
                 />
@@ -373,6 +372,7 @@ function Cell({
   isB,
   extraCls,
   rowMin,
+  zoom,
   onOpenAction,
   mutate,
 }: {
@@ -384,6 +384,7 @@ function Cell({
   isB: boolean;
   extraCls?: string;
   rowMin?: number;
+  zoom: number;
   onOpenAction: (ctx: ActionContext) => void;
   mutate: MutateFn;
 }) {
@@ -416,7 +417,7 @@ function Cell({
           }}
         />
       ) : sess ? (
-        <SessionCard ds={ds} sess={sess} tid={tid} />
+        <SessionCard ds={ds} sess={sess} tid={tid} zoom={zoom} />
       ) : null}
       <CancelChips ds={ds} time={time} tid={tid} />
     </div>
@@ -442,17 +443,25 @@ function AllTrainerDayView({
 
   return (
     <div className="overflow-x-auto overflow-y-auto rounded-xl border border-bd w-full block">
-      <table className="border-collapse bg-sf" style={{ minWidth: 420, width: "max-content", tableLayout: "fixed" }}>
+      <table
+        className="border-collapse bg-sf"
+        style={{ minWidth: "100%", tableLayout: "fixed" }}
+      >
+        <colgroup>
+          <col style={{ width: 56 }} />
+          {TRAINERS.map((t) => (
+            <col key={t.id} style={{ width: colW }} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
-            <th className="sticky top-0 left-0 z-[5] bg-sf2 px-2 py-2.5 border-b-2 border-b-acc border-r border-r-bd font-bebas text-[0.95rem] text-acc text-center" style={{ minWidth: 52 }}>
+            <th className="sticky top-0 left-0 z-[5] bg-sf2 px-2 py-2.5 border-b-2 border-b-acc border-r border-r-bd font-bebas text-[0.95rem] text-acc text-center">
               {label}
             </th>
             {TRAINERS.map((t) => (
               <th
                 key={t.id}
                 className="sticky top-0 z-[3] bg-sf2 px-1.5 py-2.5 border-b-2 border-b-bd border-r border-r-bd text-[0.82rem] font-black text-center whitespace-nowrap"
-                style={{ width: colW }}
               >
                 <span
                   className="inline-block w-2 h-2 rounded-full mr-1 align-middle"
@@ -468,7 +477,7 @@ function AllTrainerDayView({
             <tr key={h}>
               <td
                 className="sticky left-0 z-[2] bg-sf px-2 pt-2 text-[0.7rem] text-mu font-semibold border-r border-r-bd border-b border-b-bd whitespace-nowrap text-right align-top"
-                style={{ minWidth: 52, height: rowMin }}
+                style={{ height: rowMin }}
               >
                 {h}
               </td>
@@ -489,7 +498,7 @@ function AllTrainerDayView({
                   <td
                     key={t.id}
                     className={`p-[3px] border-r border-r-bd border-b border-b-bd align-top cursor-pointer hover:bg-white/[0.04] ${cls}`}
-                    style={{ width: colW, height: rowMin }}
+                    style={{ height: rowMin }}
                     onClick={(e) => {
                       const tgt = e.target as HTMLElement;
                       if (tgt.dataset.stop === "1") return;
@@ -513,7 +522,7 @@ function AllTrainerDayView({
                         }}
                       />
                     ) : sess ? (
-                      <SessionCard ds={ds} sess={sess} tid={t.id} />
+                      <SessionCard ds={ds} sess={sess} tid={t.id} zoom={zoom} />
                     ) : (
                       <div className="flex items-center justify-center h-12 text-[1.3rem] text-[rgba(35,209,96,0.2)]">+</div>
                     )}
@@ -546,12 +555,15 @@ function WeekAllView({
 
   return (
     <div className="overflow-x-auto overflow-y-auto rounded-xl border border-bd w-full block">
-      <table className="border-collapse bg-sf w-full" style={{ tableLayout: "fixed" }}>
+      <table
+        className="border-collapse bg-sf"
+        style={{ minWidth: "100%", tableLayout: "fixed" }}
+      >
         <colgroup>
           <col style={{ width: 56 }} />
           <col style={{ width: 64 }} />
           {days.map((d) => (
-            <col key={fmtDateToISO(d)} style={{ minWidth: colMin }} />
+            <col key={fmtDateToISO(d)} style={{ width: colMin }} />
           ))}
         </colgroup>
         <thead>
@@ -636,7 +648,7 @@ function WeekAllView({
                           });
                         }} />
                       ) : sess ? (
-                        <SessionCard ds={ds} sess={sess} tid={t.id} />
+                        <SessionCard ds={ds} sess={sess} tid={t.id} zoom={zoom} />
                       ) : null}
                       <CancelChips ds={ds} time={h} tid={t.id} />
                     </td>

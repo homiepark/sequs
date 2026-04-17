@@ -8,7 +8,17 @@ import {
   type TrainerId,
 } from "@/lib/types";
 
-export function SessionCard({ ds, sess, tid }: { ds: string; sess: Session; tid: TrainerId }) {
+export function SessionCard({
+  ds,
+  sess,
+  tid,
+  zoom = 1,
+}: {
+  ds: string;
+  sess: Session;
+  tid: TrainerId;
+  zoom?: number;
+}) {
   const { db, mutate } = useStore();
   const t = getTrainer(tid)!;
   const mem = getMember(db, sess.mid);
@@ -32,25 +42,49 @@ export function SessionCard({ ds, sess, tid }: { ds: string; sess: Session; tid:
   if (isPreCan || isDayCan) return null;
 
   const cardStyle = { background: t.hex };
-  const cls = "relative flex flex-col justify-center rounded-[5px] px-1.5 py-1 min-h-[48px] cursor-pointer overflow-visible group";
+  const cls = "relative flex flex-col items-center justify-center text-center rounded-[5px] px-1 py-1 h-full min-h-full cursor-pointer overflow-visible group";
+  const nameSize = Math.max(0.68, 0.8 * zoom);
+  const subSize = Math.max(0.5, 0.58 * zoom);
+  const tagSize = Math.max(0.48, 0.56 * zoom);
 
   return (
     <div className={cls} style={cardStyle}>
-      <div className="font-black text-[0.8rem] text-black whitespace-normal leading-tight" style={{ wordBreak: "keep-all" }}>
+      <div
+        className="font-black text-black whitespace-normal leading-tight w-full"
+        style={{ wordBreak: "keep-all", fontSize: `${nameSize}rem` }}
+      >
         {displayName}
-        {isHalf && <span className="text-[0.58rem] font-black opacity-75 ml-1 align-middle">·30</span>}
+        {isHalf && (
+          <span className="font-black opacity-75 ml-1 align-middle" style={{ fontSize: `${subSize}rem` }}>
+            ·30
+          </span>
+        )}
       </div>
-      <div className="text-[0.58rem] mt-0.5 flex items-center gap-0.5" style={{ color: "rgba(0,0,0,0.55)" }}>
+      <div
+        className="mt-0.5 flex items-center justify-center gap-0.5 w-full"
+        style={{ color: "rgba(0,0,0,0.55)", fontSize: `${subSize}rem` }}
+      >
         {sess.isFixed && (
-          <span className="inline-block rounded px-1 text-[0.56rem] font-bold tracking-wider bg-black/20 text-black">고정</span>
+          <span
+            className="inline-block rounded px-1 font-bold tracking-wider bg-black/20 text-black"
+            style={{ fontSize: `${tagSize}rem` }}
+          >
+            고정
+          </span>
         )}
         {isAbsent && (
-          <span className="inline-block rounded px-1 text-[0.56rem] font-bold tracking-wider bg-red text-white">결석</span>
+          <span
+            className="inline-block rounded px-1 font-bold tracking-wider bg-red text-white"
+            style={{ fontSize: `${tagSize}rem` }}
+          >
+            결석
+          </span>
         )}
         {memoIndicator && (
           <span
             title={memoTip}
-            className="inline-flex items-center justify-center rounded px-1 text-[0.6rem] font-bold bg-black/30 text-black ml-auto"
+            className="inline-flex items-center justify-center rounded px-1 font-bold bg-black/30 text-black"
+            style={{ fontSize: `${Math.max(0.52, 0.6 * zoom)}rem` }}
           >
             {memoIndicator}
           </span>
