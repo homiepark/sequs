@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { TRAINERS, type TrainerId } from "@/lib/types";
+import { TRAINERS, getTrainer, memberTrainers, type Member, type TrainerId } from "@/lib/types";
 import { Modal } from "../ui/Modal";
 
 interface ParsedLine {
@@ -9,9 +9,10 @@ interface ParsedLine {
   name: string;
   phone: string;
   valid: boolean;
+  existing: Member[];
 }
 
-function parseLines(text: string): ParsedLine[] {
+function parseLines(text: string, members: Member[]): ParsedLine[] {
   return text
     .split(/\r?\n/)
     .map((raw) => raw.trim())
@@ -32,38 +33,43 @@ function parseLines(text: string): ParsedLine[] {
         name = parts[0];
         phone = parts.slice(1).join(" ");
       }
-      return { raw, name, phone, valid: !!name };
+      const existing = name ? members.filter((m) => m.name.trim() === name) : [];
+      return { raw, name, phone, valid: !!name, existing };
     });
 }
 
 export function BulkAddModal({ onClose }: { onClose: () => void }) {
-  const { mutate } = useStore();
+  const { db, mutate } = useStore();
   const [text, setText] = useState("");
   const [tids, setTids] = useState<TrainerId[]>([]);
+  const [includeDupes, setIncludeDupes] = useState(false);
 
   function toggleTid(id: TrainerId) {
     setTids((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
-  const lines = useMemo(() => parseLines(text), [text]);
-  const validCount = lines.filter((l) => l.valid).length;
+  const lines = useMemo(() => parseLines(text, db.members), [text, db.members]);
+  const newLines = lines.filter((l) => l.valid && !l.existing.length);
+  const dupLines = lines.filter((l) => l.valid && l.existing.length > 0);
+  const toAddCount = includeDupes
+    ? newLines.length + dupLines.length
+    : newLines.length;
 
   function save() {
-    if (!validCount) return alert("추가할 회원 이름을 입력해주세요");
+    if (!toAddCount) return alert("추가할 회원이 없습니다");
     if (!tids.length) return alert("담당 트레이너를 최소 1명 선택해주세요");
-    mutate(`회원 ${validCount}명 일괄 추가`, (d) => {
+    const toAdd = includeDupes ? [...newLines, ...dupLines] : newLines;
+    mutate(`회원 ${toAdd.length}명 일괄 추가`, (d) => {
       const now = Date.now();
-      lines
-        .filter((l) => l.valid)
-        .forEach((l, i) => {
-          d.members.push({
-            id: "m" + (now + i),
-            name: l.name,
-            phone: l.phone,
-            tid: tids[0],
-            tids,
-          });
+      toAdd.forEach((l, i) => {
+        d.members.push({
+          id: "m" + (now + i),
+          name: l.name,
+          phone: l.phone,
+          tid: tids[0],
+          tids,
         });
+      });
     });
     onClose();
   }
@@ -114,19 +120,80 @@ export function BulkAddModal({ onClose }: { onClose: () => void }) {
       </div>
 
       {text.trim() && (
-        <div className="mb-2 max-h-[140px] overflow-y-auto bg-sf2 rounded-lg border border-bd p-2">
-          <div className="text-[0.72rem] text-mu mb-1">미리보기 ({validCount}명)</div>
-          <div className="flex flex-col gap-1">
-            {lines.map((l, i) => (
-              <div key={i} className="flex items-center gap-2 text-[0.78rem]">
-                <span className="text-mu w-5 text-right">{i + 1}</span>
-                <span className="font-bold flex-1">{l.name || "(빈 이름)"}</span>
-                {l.phone && <span className="text-mu text-[0.72rem]">{l.phone}</span>}
-                {!l.valid && <span className="text-red text-[0.7rem]">무시됨</span>}
-              </div>
-            ))}
+        <>
+          <div className="mb-2 max-h-[180px] overflow-y-auto bg-sf2 rounded-lg border border-bd p-2">
+            <div className="text-[0.72rem] text-mu mb-1 flex gap-2 flex-wrap">
+              <span>미리보기</span>
+              <span className="text-green">신규 {newLines.length}</span>
+              {dupLines.length > 0 && (
+                <span className="text-orange">중복 {dupLines.length}{includeDupes ? " (추가됨)" : " (스킵)"}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {lines.map((l, i) => {
+                const isDup = l.existing.length > 0;
+                const willAdd = l.valid && (!isDup || includeDupes);
+                return (
+                  <div key={i} className="flex items-start gap-2 text-[0.78rem]">
+                    <span className="text-mu w-5 text-right flex-shrink-0">{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className={`font-bold ${willAdd ? "text-tx" : "text-mu line-through"}`}
+                        >
+                          {l.name || "(빈 이름)"}
+                        </span>
+                        {l.phone && (
+                          <span className="text-mu text-[0.7rem]">{l.phone}</span>
+                        )}
+                        {isDup && (
+                          <span className="text-[0.66rem] font-bold text-orange px-1 py-0.5 rounded border border-orange/60">
+                            {includeDupes ? "⚠ 중복·추가됨" : "⚠ 이미 등록됨"}
+                          </span>
+                        )}
+                        {!l.valid && (
+                          <span className="text-red text-[0.7rem]">무시됨</span>
+                        )}
+                      </div>
+                      {isDup && (
+                        <div className="flex flex-wrap gap-1.5 mt-0.5 text-[0.68rem] text-mu">
+                          <span>기존:</span>
+                          {l.existing.map((m) => (
+                            <span key={m.id} className="flex items-center gap-1">
+                              {memberTrainers(m).map((tid) => {
+                                const t = getTrainer(tid);
+                                return t ? (
+                                  <span
+                                    key={tid}
+                                    style={{ color: t.hex }}
+                                  >
+                                    {t.name}
+                                  </span>
+                                ) : null;
+                              })}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+
+          {dupLines.length > 0 && (
+            <label className="flex items-center gap-2 mb-2 cursor-pointer px-1">
+              <input
+                type="checkbox"
+                checked={includeDupes}
+                onChange={(e) => setIncludeDupes(e.target.checked)}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <span className="text-[0.8rem]">동명이인일 수 있음 — 중복도 강제 추가</span>
+            </label>
+          )}
+        </>
       )}
 
       <div className="flex gap-2 mt-3">
@@ -135,10 +202,10 @@ export function BulkAddModal({ onClose }: { onClose: () => void }) {
         </button>
         <button
           onClick={save}
-          disabled={!validCount || !tids.length}
+          disabled={!toAddCount || !tids.length}
           className="flex-1 py-2.5 rounded-lg bg-acc text-black font-bold text-[0.83rem] disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {validCount ? `${validCount}명 추가` : "추가"}
+          {toAddCount ? `${toAddCount}명 추가` : "추가"}
         </button>
       </div>
     </Modal>

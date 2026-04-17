@@ -235,11 +235,19 @@ function MemberModal({
   member: Member | null;
   onClose: () => void;
 }) {
-  const { mutate } = useStore();
+  const { db, mutate } = useStore();
   const [name, setName] = useState(member?.name || "");
   const [phone, setPhone] = useState(member?.phone || "");
   const [tids, setTids] = useState<TrainerId[]>(member ? memberTrainers(member) : []);
   const [memo, setMemo] = useState(member?.memo || "");
+
+  const duplicates = useMemo(() => {
+    const n = name.trim();
+    if (!n) return [];
+    return db.members.filter(
+      (m) => m.id !== member?.id && m.name.trim() === n
+    );
+  }, [db.members, name, member?.id]);
 
   function toggleTid(id: TrainerId) {
     setTids((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -284,6 +292,32 @@ function MemberModal({
           placeholder="홍길동"
           className="w-full bg-sf2 border border-bd text-tx px-2.5 py-2 rounded-lg text-[0.84rem]"
         />
+        {duplicates.length > 0 && (
+          <div className="mt-1.5 px-2.5 py-2 rounded-md border border-orange/60 bg-[rgba(255,170,0,0.08)]">
+            <div className="text-[0.72rem] font-bold text-orange mb-1">
+              ⚠️ 같은 이름의 회원 {duplicates.length}명
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {duplicates.map((d) => (
+                <div key={d.id} className="text-[0.74rem] text-tx flex flex-wrap gap-1.5 items-center">
+                  <span className="font-bold">{d.name}</span>
+                  {memberTrainers(d).map((id) => {
+                    const t = getTrainer(id);
+                    return t ? (
+                      <span key={id} style={{ color: t.hex }} className="text-[0.7rem]">
+                        {t.name}
+                      </span>
+                    ) : null;
+                  })}
+                  {d.phone && <span className="text-[0.7rem] text-mu">{d.phone}</span>}
+                </div>
+              ))}
+            </div>
+            <div className="text-[0.7rem] text-mu mt-1">
+              동명이인이면 그대로 추가해도 됩니다.
+            </div>
+          </div>
+        )}
       </div>
       <div className="mb-3">
         <label className="block text-[0.71rem] text-mu mb-1 font-medium">연락처</label>
