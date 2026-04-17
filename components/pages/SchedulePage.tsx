@@ -599,133 +599,135 @@ function WeekAllView({
   const wideScreen = containerW > 800;
   const defaultDataW = wideScreen
     ? Math.floor((containerW - stickyW) / days.length)
-    : 85;
+    : 80;
   const colMin = Math.max(40, Math.round(defaultDataW * zoom));
   const { mutate } = useStore();
 
+  const gridTemplateColumns = `${timeW}px ${trainerW}px repeat(${days.length}, ${colMin}px)`;
+
   return (
-    <div ref={wrapRef} className="overflow-x-auto overflow-y-auto rounded-xl border border-bd w-full block">
-      <table
-        className="border-collapse bg-sf"
-        style={{ tableLayout: "fixed" }}
+    <div ref={wrapRef} className="overflow-auto rounded-xl border border-bd w-full">
+      <div
+        className="bg-sf grid"
+        style={{
+          gridTemplateColumns,
+          gridAutoRows: `${rowMin}px`,
+          width: "max-content",
+        }}
       >
-        <colgroup>
-          <col style={{ width: timeW }} />
-          <col style={{ width: trainerW }} />
-          {days.map((d) => (
-            <col key={fmtDateToISO(d)} style={{ width: colMin }} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr>
-            <th
-              className="sticky top-0 left-0 z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd font-bebas text-[0.85rem] text-acc text-center"
-              style={{ width: timeW, minWidth: timeW, maxWidth: timeW }}
+        {/* header row */}
+        <div
+          className="sticky top-0 left-0 z-[5] bg-sf2 flex items-center justify-center font-bebas text-[0.85rem] text-acc border-b-2 border-b-acc border-r border-r-bd"
+          style={{ gridRow: 1, gridColumn: 1, height: rowMin }}
+        >
+          시간
+        </div>
+        <div
+          className="sticky top-0 z-[5] bg-sf2 flex items-center justify-center text-[0.72rem] md:text-[0.85rem] text-tx font-bold border-b-2 border-b-acc border-r border-r-bd whitespace-nowrap"
+          style={{ left: timeW, gridRow: 1, gridColumn: 2, height: rowMin }}
+        >
+          트레이너
+        </div>
+        {days.map((d, i) => {
+          const ds = fmtDateToISO(d);
+          const isT = ds === TODAY;
+          return (
+            <div
+              key={ds}
+              className="sticky top-0 z-[3] bg-sf2 flex flex-col items-center justify-center border-b-2 border-r border-r-bd whitespace-nowrap"
+              style={{ borderBottomColor: isT ? "var(--acc)" : "var(--bd)", gridRow: 1, gridColumn: 3 + i, height: rowMin }}
             >
-              시간
-            </th>
-            <th
-              className="sticky top-0 z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd text-[0.72rem] md:text-[0.85rem] text-tx text-center font-bold whitespace-nowrap"
-              style={{ left: timeW, width: trainerW, minWidth: trainerW, maxWidth: trainerW }}
-            >
-              트레이너
-            </th>
-            {days.map((d, i) => {
-              const ds = fmtDateToISO(d);
-              const isT = ds === TODAY;
-              return (
-                <th
-                  key={ds}
-                  className="sticky top-0 z-[3] bg-sf2 px-1.5 py-2 border-b-2 border-r border-r-bd text-center whitespace-nowrap"
-                  style={{ borderBottomColor: isT ? "var(--acc)" : "var(--bd)" }}
-                >
-                  <div className={`font-black text-[0.82rem] ${isT ? "text-acc" : "text-tx"}`}>{DAYS_SHORT[i]}</div>
-                  <div className="text-[0.64rem] text-mu mt-0.5 flex items-center justify-center gap-1">
-                    {d.getMonth() + 1}/{d.getDate()}
-                    <MemoBar ds={ds} compact />
-                  </div>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {HOURS.map((h) =>
-            TRAINERS.map((t, ti) => {
-              const isLastTrainer = ti === TRAINERS.length - 1;
-              const rowEndCls = isLastTrainer ? "border-b-2 border-b-[#4a4a68]" : "border-b border-b-bd";
-              return (
-              <tr key={h + t.id}>
-                {ti === 0 && (
-                  <td
-                    className={`sticky left-0 z-[2] bg-sf px-1 text-[0.82rem] md:text-[1rem] text-tx font-semibold border-r border-r-bd text-center align-middle font-bebas tracking-wider border-b-2 border-b-[#4a4a68]`}
-                    rowSpan={TRAINERS.length}
-                    style={{ width: timeW, minWidth: timeW, maxWidth: timeW }}
-                  >
-                    {h}
-                  </td>
-                )}
-                <td
-                  className={`sticky z-[2] bg-sf px-1 py-1 text-[0.72rem] md:text-[0.86rem] font-bold border-r border-r-bd whitespace-nowrap text-center ${rowEndCls}`}
-                  style={{
-                    left: timeW,
-                    width: trainerW,
-                    minWidth: trainerW,
-                    maxWidth: trainerW,
-                    color: t.hex,
-                    minHeight: rowMin,
-                  }}
-                >
-                  {t.name}
-                </td>
-                {days.map((d) => {
-                  const ds = fmtDateToISO(d);
-                  const hHalf = h.replace(":00", ":30");
-                  const allSess = getSessionsForDate(db, ds);
-                  const sess =
-                    allSess.find((s) => s.time === h && s.tid === t.id) ||
-                    allSess.find((s) => s.time === hHalf && s.tid === t.id) ||
-                    null;
-                  const isB = isSlotBlocked(db, ds, t.id, h);
-                  const cls = isB
-                    ? "blocked-pattern cursor-default"
-                    : sess
-                    ? ""
-                    : "bg-[rgba(35,209,96,0.04)] hover:bg-[rgba(35,209,96,0.09)]";
-                  return (
-                    <td
-                      key={ds}
-                      className={`p-[2px] border-r border-r-bd align-middle cursor-pointer hover:bg-white/[0.04] ${rowEndCls} ${cls}`}
-                      style={{ minHeight: rowMin }}
-                      onClick={(e) => {
-                        const tgt = e.target as HTMLElement;
-                        if (tgt.dataset.stop === "1") return;
-                        onOpenAction({ date: ds, time: h, tid: t.id, sess, isB, x: e.clientX, y: e.clientY });
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        onOpenAction({ date: ds, time: h, tid: t.id, sess, isB, x: e.clientX, y: e.clientY });
-                      }}
+              <div className={`font-black text-[0.82rem] ${isT ? "text-acc" : "text-tx"}`}>{DAYS_SHORT[i]}</div>
+              <div className="text-[0.64rem] text-mu mt-0.5 flex items-center justify-center gap-1">
+                {d.getMonth() + 1}/{d.getDate()}
+                <MemoBar ds={ds} compact />
+              </div>
+            </div>
+          );
+        })}
+
+        {/* body rows */}
+        {HOURS.map((h, hi) => {
+          const baseRow = 2 + hi * TRAINERS.length;
+          return (
+            <Fragment key={h}>
+              <div
+                className="sticky left-0 z-[2] bg-sf flex items-center justify-center font-semibold font-bebas tracking-wider text-[0.82rem] md:text-[1rem] text-tx border-r border-r-bd border-b-2 border-b-[#4a4a68]"
+                style={{ gridColumn: 1, gridRow: `${baseRow} / span ${TRAINERS.length}` }}
+              >
+                {h}
+              </div>
+              {TRAINERS.map((t, ti) => {
+                const isLast = ti === TRAINERS.length - 1;
+                const rowIdx = baseRow + ti;
+                const rowEndCls = isLast
+                  ? "border-b-2 border-b-[#4a4a68]"
+                  : "border-b border-b-bd";
+                return (
+                  <Fragment key={h + t.id}>
+                    <div
+                      className={`sticky z-[2] bg-sf flex items-center justify-center text-[0.72rem] md:text-[0.86rem] font-bold border-r border-r-bd whitespace-nowrap ${rowEndCls}`}
+                      style={{ left: timeW, gridColumn: 2, gridRow: rowIdx, color: t.hex }}
                     >
-                      {isB ? (
-                        <BlockedCellContent db={db} ds={ds} time={h} tid={t.id} onUnblock={() => {
-                          mutate("차단 해제", (d) => {
-                            delete d.blocks[`${ds}_${t.id}_${h}`];
-                          });
-                        }} />
-                      ) : sess ? (
-                        <SessionCard ds={ds} sess={sess} tid={t.id} zoom={zoom} />
-                      ) : null}
-                      <CancelChips ds={ds} time={h} tid={t.id} />
-                    </td>
-                  );
-                })}
-              </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
+                      {t.name}
+                    </div>
+                    {days.map((d, di) => {
+                      const ds = fmtDateToISO(d);
+                      const hHalf = h.replace(":00", ":30");
+                      const allSess = getSessionsForDate(db, ds);
+                      const sess =
+                        allSess.find((s) => s.time === h && s.tid === t.id) ||
+                        allSess.find((s) => s.time === hHalf && s.tid === t.id) ||
+                        null;
+                      const isB = isSlotBlocked(db, ds, t.id, h);
+                      const cls = isB
+                        ? "blocked-pattern cursor-default"
+                        : sess
+                        ? ""
+                        : "bg-[rgba(35,209,96,0.04)] hover:bg-[rgba(35,209,96,0.09)]";
+                      return (
+                        <div
+                          key={ds}
+                          className={`relative p-[2px] border-r border-r-bd flex items-stretch cursor-pointer hover:bg-white/[0.04] ${rowEndCls} ${cls}`}
+                          style={{ gridColumn: 3 + di, gridRow: rowIdx }}
+                          onClick={(e) => {
+                            const tgt = e.target as HTMLElement;
+                            if (tgt.dataset.stop === "1") return;
+                            onOpenAction({ date: ds, time: h, tid: t.id, sess, isB, x: e.clientX, y: e.clientY });
+                          }}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            onOpenAction({ date: ds, time: h, tid: t.id, sess, isB, x: e.clientX, y: e.clientY });
+                          }}
+                        >
+                          <div className="flex flex-col w-full gap-0.5">
+                            {isB ? (
+                              <BlockedCellContent
+                                db={db}
+                                ds={ds}
+                                time={h}
+                                tid={t.id}
+                                onUnblock={() => {
+                                  mutate("차단 해제", (d) => {
+                                    delete d.blocks[`${ds}_${t.id}_${h}`];
+                                  });
+                                }}
+                              />
+                            ) : sess ? (
+                              <SessionCard ds={ds} sess={sess} tid={t.id} zoom={zoom} />
+                            ) : null}
+                            <CancelChips ds={ds} time={h} tid={t.id} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </Fragment>
+                );
+              })}
+            </Fragment>
+          );
+        })}
+      </div>
     </div>
   );
 }

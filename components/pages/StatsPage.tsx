@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
   SALARY_CONFIGS,
+  SALARY_EXCLUDED,
   TRAINERS,
   getMember,
   getSessionsForDate,
@@ -10,6 +11,7 @@ import {
   type Session,
   type TrainerId,
 } from "@/lib/types";
+import { TrainerTabs } from "../ui/TrainerTabs";
 
 export function StatsPage() {
   const { db, exportJSON, importJSON } = useStore();
@@ -104,12 +106,6 @@ export function StatsPage() {
             <option key={m} value={m}>{m}월</option>
           ))}
         </select>
-        <select value={trF} onChange={(e) => setTrF(e.target.value)} className="bg-sf border border-bd text-tx px-2.5 py-1.5 rounded-lg text-[0.8rem] outline-none">
-          <option value="">전체</option>
-          {TRAINERS.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
         <div className="flex gap-1.5 ml-auto">
           <button onClick={doExport} className="bg-sf2 border border-bd text-tx px-3 py-1.5 rounded-lg text-[0.78rem] font-bold hover:border-acc hover:text-acc">
             📥 내보내기
@@ -120,6 +116,8 @@ export function StatsPage() {
           <input ref={fileRef} type="file" accept="application/json" onChange={onImport} className="hidden" />
         </div>
       </div>
+
+      <TrainerTabs value={trF || "all"} onChange={(v) => setTrF(v === "all" ? "" : v)} />
 
       <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))" }}>
         <KPI label="출석" value={present.length} color="text-acc" />
@@ -222,11 +220,9 @@ function SalarySection({
   trF: string;
 }) {
   const { db, mutate } = useStore();
-  const configured = (Object.keys(SALARY_CONFIGS) as TrainerId[]).filter((tid) => {
-    if (trF && trF !== tid) return false;
-    return !!SALARY_CONFIGS[tid];
-  });
-  if (!configured.length) return null;
+  const targets = TRAINERS.filter((t) => (trF ? t.id === trF : true));
+  const hasAny = targets.some((t) => SALARY_CONFIGS[t.id] || SALARY_EXCLUDED[t.id]);
+  if (!hasAny) return null;
 
   const monthKey = `${yr}-${String(mo).padStart(2, "0")}`;
 
@@ -237,9 +233,29 @@ function SalarySection({
         <span className="text-[0.72rem] text-mu">{monthKey}</span>
       </div>
       <div className="flex flex-col gap-3">
-        {configured.map((tid) => {
-          const t = getTrainer(tid)!;
-          const cfg = SALARY_CONFIGS[tid]!;
+        {targets.map((t) => {
+          const excluded = SALARY_EXCLUDED[t.id];
+          if (excluded) {
+            const sessions = present.filter((s) => s.tid === t.id).length;
+            return (
+              <div key={t.id} className="bg-sf border rounded-xl p-4" style={{ borderColor: t.hex + "55" }}>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: t.hex }} />
+                  <span className="font-bold text-[0.95rem] md:text-[1.1rem]" style={{ color: t.hex }}>
+                    {t.name}
+                  </span>
+                  <span className="text-[0.76rem] text-mu">수업 {sessions}회</span>
+                </div>
+                <div className="text-[0.8rem] text-mu">{excluded}</div>
+              </div>
+            );
+          }
+
+          const cfgMaybe = SALARY_CONFIGS[t.id];
+          if (!cfgMaybe) return null;
+          const cfg = cfgMaybe;
+
+          const tid = t.id;
           const sessions = present.filter((s) => s.tid === tid).length;
           const key = `${monthKey}_${tid}`;
           const extras = (db.monthlyExtras || {})[key] || {};
@@ -249,7 +265,10 @@ function SalarySection({
           const afterDeduction = cfg.laborIncome - cfg.insurance - cfg.retirement;
           const volansSales = volansCount * cfg.volansPrice;
           const businessIncome = sessionFee - cfg.laborIncome + volansSales;
-          const total = afterDeduction + businessIncome;
+          const whRate = cfg.withholdingRate ?? 0.033;
+          const withholdingTax = cfg.deductWithholding ? Math.round(businessIncome * whRate) : 0;
+          const businessAfterTax = cfg.deductWithholding ? businessIncome - withholdingTax : businessIncome;
+          const total = afterDeduction + businessAfterTax;
 
           function setVolans(n: number) {
             mutate("볼란스 수 변경", (d) => {
@@ -259,7 +278,7 @@ function SalarySection({
           }
 
           function copy() {
-            const text = [
+            const lines = [
               `${t.name} · ${monthKey}`,
               `수업수\t${sessions}`,
               `수업 단가\t${cfg.sessionPrice}`,
@@ -271,10 +290,15 @@ function SalarySection({
               `볼란스 수\t${volansCount}`,
               `볼란스 매출\t${volansSales}`,
               `사업소득\t${businessIncome}`,
-              `총급여\t${total}`,
-              `세금계산서 발행\t${businessIncome}`,
-            ].join("\n");
-            navigator.clipboard.writeText(text);
+            ];
+            if (cfg.deductWithholding) {
+              lines.push(`원천세 ${(whRate * 100).toFixed(1)}%\t${withholdingTax}`);
+              lines.push(`신고소득 공제 후\t${businessAfterTax}`);
+            } else {
+              lines.push(`세금계산서 발행\t${businessIncome}`);
+            }
+            lines.push(`총급여\t${total}`);
+            navigator.clipboard.writeText(lines.join("\n"));
           }
 
           return (
@@ -332,9 +356,22 @@ function SalarySection({
                     {won(businessIncome)}
                   </span>
                 </div>
-                <div className="text-[0.7rem] text-mu mt-1">
-                  ↳ 세금계산서 발행 금액 (원천세 3.3% 대상)
-                </div>
+                {cfg.deductWithholding ? (
+                  <>
+                    <div className="flex items-center justify-between mt-2 text-[0.78rem]">
+                      <span className="text-mu">원천세 {(whRate * 100).toFixed(1)}% 차감</span>
+                      <span className="text-red">− {won(withholdingTax)}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1 pt-2 border-t border-bd">
+                      <span className="font-bold text-tx text-[0.82rem]">신고소득 공제 후</span>
+                      <span className="font-bebas text-[1.15rem] text-tx">{won(businessAfterTax)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-[0.7rem] text-mu mt-1">
+                    ↳ 세금계산서 발행 금액 (전액 수령)
+                  </div>
+                )}
               </div>
 
               <div className="bg-acc/10 border border-acc/40 rounded-lg px-3 py-3 flex items-center justify-between">

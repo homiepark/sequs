@@ -89,6 +89,8 @@ export interface SalaryConfig {
   insurance: number;
   retirement: number;
   volansPrice: number;
+  deductWithholding: boolean;
+  withholdingRate?: number;
 }
 
 export const SALARY_CONFIGS: Partial<Record<TrainerId, SalaryConfig>> = {
@@ -98,7 +100,28 @@ export const SALARY_CONFIGS: Partial<Record<TrainerId, SalaryConfig>> = {
     insurance: 61000,
     retirement: 120400,
     volansPrice: 18000,
+    deductWithholding: false,
   },
+  t3: {
+    sessionPrice: 55000,
+    laborIncome: 1204000,
+    insurance: 61000,
+    retirement: 120400,
+    volansPrice: 18000,
+    deductWithholding: true,
+  },
+  t4: {
+    sessionPrice: 55000,
+    laborIncome: 1204000,
+    insurance: 87530,
+    retirement: 120400,
+    volansPrice: 18000,
+    deductWithholding: true,
+  },
+};
+
+export const SALARY_EXCLUDED: Partial<Record<TrainerId, string>> = {
+  t1: "대표 (수업료 정산 제외)",
 };
 
 export function sessionSlotKey(ds: string, tid: TrainerId, time: string): string {
