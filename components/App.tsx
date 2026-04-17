@@ -3,14 +3,13 @@ import { useEffect, useState } from "react";
 import { Header } from "./Header";
 import { SchedulePage } from "./pages/SchedulePage";
 import { FixedPage } from "./pages/FixedPage";
-import { AttendancePage } from "./pages/AttendancePage";
 import { MembersPage } from "./pages/MembersPage";
 import { StatsPage } from "./pages/StatsPage";
 import { Toast } from "./ui/Toast";
 import { PWARegister } from "./PWARegister";
 import { useStore } from "@/lib/store";
 
-export type Page = "schedule" | "fixed" | "attendance" | "members" | "stats";
+export type Page = "schedule" | "fixed" | "members" | "stats";
 
 export function App() {
   const [mounted, setMounted] = useState(false);
@@ -56,7 +55,6 @@ export function App() {
       <main className="px-3.5 pt-3.5 pb-[60px] max-w-[1300px] mx-auto">
         {page === "schedule" && <SchedulePage />}
         {page === "fixed" && <FixedPage />}
-        {page === "attendance" && <AttendancePage />}
         {page === "members" && <MembersPage />}
         {page === "stats" && <StatsPage />}
       </main>

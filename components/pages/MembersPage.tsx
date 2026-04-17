@@ -14,6 +14,7 @@ import {
 } from "@/lib/types";
 import { TrainerTabs } from "../ui/TrainerTabs";
 import { Modal } from "../ui/Modal";
+import { BulkAddModal } from "../members/BulkAddModal";
 
 function uniqueDatesForMember(db: DB, mid: string): string[] {
   const dates = new Set<string>();
@@ -44,6 +45,7 @@ export function MembersPage() {
   const [trF, setTrF] = useState("all");
   const [editing, setEditing] = useState<Member | null>(null);
   const [adding, setAdding] = useState(false);
+  const [bulkAdding, setBulkAdding] = useState(false);
 
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -114,6 +116,12 @@ export function MembersPage() {
           className="px-3.5 py-2 rounded-lg bg-acc text-black font-bold text-[0.78rem] whitespace-nowrap"
         >
           + 추가
+        </button>
+        <button
+          onClick={() => setBulkAdding(true)}
+          className="px-3.5 py-2 rounded-lg bg-sf2 text-tx border border-bd font-bold text-[0.78rem] whitespace-nowrap hover:border-acc hover:text-acc"
+        >
+          📋 대량 추가
         </button>
       </div>
       <TrainerTabs value={trF} onChange={setTrF} />
@@ -209,6 +217,8 @@ export function MembersPage() {
           }}
         />
       )}
+
+      {bulkAdding && <BulkAddModal onClose={() => setBulkAdding(false)} />}
     </div>
   );
 }

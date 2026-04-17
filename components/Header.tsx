@@ -5,7 +5,6 @@ import type { Page } from "./App";
 const PAGES: { id: Page; label: string }[] = [
   { id: "schedule", label: "스케줄" },
   { id: "fixed", label: "고정" },
-  { id: "attendance", label: "출석" },
   { id: "members", label: "회원" },
   { id: "stats", label: "통계" },
 ];

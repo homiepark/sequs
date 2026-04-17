@@ -19,6 +19,7 @@ import { CancelChips } from "../schedule/CancelChips";
 import { ActionMenu, type ActionContext } from "../schedule/ActionMenu";
 import { SessionModal } from "../schedule/SessionModal";
 import { BulkBlockModal } from "../schedule/BulkBlockModal";
+import { MemoBar } from "../schedule/MemoBar";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -93,7 +94,7 @@ export function SchedulePage() {
       </div>
 
       <div className="flex gap-1.5 mb-3 flex-wrap">
-        <ModeBtn active={viewMode === "single"} onClick={() => setViewMode("single")}>📋 개인</ModeBtn>
+        <ModeBtn active={viewMode === "single"} onClick={() => setViewMode("single")}>📋 개별</ModeBtn>
         <ModeBtn active={viewMode === "dayAll"} onClick={() => setViewMode("dayAll")}>📅 하루 전체</ModeBtn>
         <ModeBtn active={viewMode === "weekAll"} onClick={() => setViewMode("weekAll")}>📊 주간 전체</ModeBtn>
       </div>
@@ -123,11 +124,12 @@ export function SchedulePage() {
               const s = fmtDateToISO(d);
               const on = s === allDay;
               const isT = s === TODAY;
+              const hasMemo = !!(db.memos || {})[s];
               return (
                 <button
                   key={s}
                   onClick={() => setAllDay(s)}
-                  className={`px-3 py-1.5 rounded-lg border-[1.5px] text-[0.8rem] font-bold whitespace-nowrap flex-shrink-0 ${
+                  className={`relative px-3 py-1.5 rounded-lg border-[1.5px] text-[0.8rem] font-bold whitespace-nowrap flex-shrink-0 ${
                     on
                       ? "bg-acc text-black border-acc"
                       : isT
@@ -139,10 +141,14 @@ export function SchedulePage() {
                   <span className="block text-[0.6rem] opacity-70">
                     {d.getMonth() + 1}/{d.getDate()}
                   </span>
+                  {hasMemo && (
+                    <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-acc" />
+                  )}
                 </button>
               );
             })}
           </div>
+          <MemoBar ds={allDay} />
           <AllTrainerDayView
             db={db}
             ds={allDay}
@@ -243,17 +249,21 @@ function SingleTrainerView({
           <span className="text-[0.7rem] font-bold" style={{ color: t.hex }}>{t.name}</span>
         </div>
         {days.map((d, i) => {
-          const isToday = fmtDateToISO(d) === TODAY;
+          const ds = fmtDateToISO(d);
+          const isToday = ds === TODAY;
           const isLast = i === days.length - 1;
           return (
             <div
-              key={fmtDateToISO(d)}
+              key={ds}
               className={`bg-sf2 px-1.5 py-2 text-center border-b-2 ${
                 isToday ? "border-b-acc" : "border-b-bd"
               } ${isLast ? "" : "border-r border-r-bd"}`}
             >
               <div className={`text-[0.84rem] font-black ${isToday ? "text-acc" : ""}`}>{DAYS_SHORT[i]}</div>
-              <div className="text-[0.64rem] text-mu mt-0.5">{d.getMonth() + 1}/{d.getDate()}</div>
+              <div className="text-[0.64rem] text-mu mt-0.5 flex items-center justify-center gap-1">
+                {d.getMonth() + 1}/{d.getDate()}
+                <MemoBar ds={ds} compact />
+              </div>
             </div>
           );
         })}
@@ -475,15 +485,19 @@ function WeekAllView({
               트레이너
             </th>
             {days.map((d, i) => {
-              const isT = fmtDateToISO(d) === TODAY;
+              const ds = fmtDateToISO(d);
+              const isT = ds === TODAY;
               return (
                 <th
-                  key={fmtDateToISO(d)}
+                  key={ds}
                   className="sticky top-0 z-[3] bg-sf2 px-1.5 py-2 border-b-2 border-r border-r-bd text-[0.7rem] text-center whitespace-nowrap"
                   style={{ width: 90, borderBottomColor: isT ? "var(--acc)" : "var(--bd)" }}
                 >
                   <div className={`font-black text-[0.8rem] ${isT ? "text-acc" : ""}`}>{DAYS_SHORT[i]}</div>
-                  <div className="text-[0.6rem] text-mu mt-0.5">{d.getMonth() + 1}/{d.getDate()}</div>
+                  <div className="text-[0.6rem] text-mu mt-0.5 flex items-center justify-center gap-1">
+                    {d.getMonth() + 1}/{d.getDate()}
+                    <MemoBar ds={ds} compact />
+                  </div>
                 </th>
               );
             })}

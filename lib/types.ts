@@ -77,6 +77,7 @@ export interface DB {
   att: Record<string, AttStatus>;
   blocks: Record<string, boolean>;
   cancelHistory: CancelHistoryEntry[];
+  memos?: Record<string, string>;
 }
 
 export const TRAINERS: Trainer[] = [
@@ -107,6 +108,7 @@ export function emptyDB(): DB {
     att: {},
     blocks: {},
     cancelHistory: [],
+    memos: {},
   };
 }
 
@@ -125,6 +127,7 @@ export function normalizeDB(raw: unknown): DB {
     att: r.att && typeof r.att === "object" ? (r.att as Record<string, AttStatus>) : {},
     blocks: r.blocks && typeof r.blocks === "object" ? (r.blocks as Record<string, boolean>) : {},
     cancelHistory: Array.isArray(r.cancelHistory) ? (r.cancelHistory as CancelHistoryEntry[]) : [],
+    memos: r.memos && typeof r.memos === "object" ? (r.memos as Record<string, string>) : {},
   };
 }
 
