@@ -28,7 +28,7 @@ export function Modal({
       }}
     >
       <div
-        className={`bg-sf border border-bd rounded-[15px] w-full anim-fade-up my-auto max-h-[calc(100vh-1.5rem)] overflow-y-auto ${
+        className={`bg-sf border border-bd rounded-[15px] w-full anim-fade-up my-auto max-h-[calc(100vh-1.5rem)] overflow-y-auto overscroll-contain ${
           wide ? "max-w-[430px]" : "max-w-[370px]"
         }`}
         style={{ padding: "22px" }}

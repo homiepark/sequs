@@ -138,7 +138,11 @@ export function MemberAutocomplete({
       )}
 
       {focused && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-sf border border-bd rounded-lg shadow-2xl z-50 max-h-[260px] overflow-y-auto">
+        <div
+          className="absolute top-full left-0 right-0 mt-1 bg-sf border border-bd rounded-lg shadow-2xl z-50 max-h-[260px] overflow-y-auto overscroll-contain"
+          style={{ touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
           {matches.length > 0 && (
             <div>
               {matches.map((m) => {
