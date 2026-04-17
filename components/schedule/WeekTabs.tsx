@@ -85,7 +85,7 @@ export function WeekTabs({
             key={it.key}
             ref={on ? selRef : undefined}
             onClick={() => onPick(it.off)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[0.78rem] font-bold whitespace-nowrap border-[1.5px] transition ${
+            className={`flex-shrink-0 px-3 py-1.5 md:px-4 md:py-2.5 rounded-lg text-[0.78rem] md:text-[0.95rem] font-bold whitespace-nowrap border-[1.5px] transition ${
               on
                 ? "bg-acc text-black border-acc"
                 : "bg-sf2 text-tx border-bd hover:border-acc hover:text-acc"

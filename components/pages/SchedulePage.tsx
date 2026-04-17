@@ -34,7 +34,11 @@ export function SchedulePage() {
   const [weekOff, setWeekOff] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("dayAll");
   const [selTr, setSelTr] = useState<TrainerId>("t1");
-  const [allDay, setAllDay] = useState<string>(TODAY);
+  const todayDow = (() => {
+    const d = new Date().getDay();
+    return d === 0 ? 5 : Math.min(5, d - 1);
+  })();
+  const [dayIdx, setDayIdx] = useState<number>(todayDow);
   const [action, setAction] = useState<ActionContext | null>(null);
   const [modal, setModal] = useState<{
     date: string;
@@ -58,12 +62,7 @@ export function SchedulePage() {
     days[5].getMonth() + 1
   }/${days[5].getDate()}`;
 
-  useEffect(() => {
-    if (!days.find((d) => fmtDateToISO(d) === allDay)) {
-      const today = days.find((d) => fmtDateToISO(d) === TODAY);
-      setAllDay(today ? fmtDateToISO(today) : fmtDateToISO(days[0]));
-    }
-  }, [days, allDay]);
+  const allDay = fmtDateToISO(days[dayIdx] || days[0]);
 
   function chWeek(d: number) {
     setWeekOff((w) => w + d);
@@ -84,7 +83,7 @@ export function SchedulePage() {
         <select
           value={days[0].getFullYear()}
           onChange={(e) => onYM(parseInt(e.target.value), days[0].getMonth() + 1)}
-          className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 rounded-lg text-[0.8rem] outline-none"
+          className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg text-[0.8rem] md:text-[0.95rem] outline-none"
         >
           {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => (
             <option key={y} value={y}>{y}년</option>
@@ -93,16 +92,16 @@ export function SchedulePage() {
         <select
           value={days[0].getMonth() + 1}
           onChange={(e) => onYM(days[0].getFullYear(), parseInt(e.target.value))}
-          className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 rounded-lg text-[0.8rem] outline-none"
+          className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg text-[0.8rem] md:text-[0.95rem] outline-none"
         >
           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
             <option key={m} value={m}>{m}월</option>
           ))}
         </select>
-        <button onClick={() => chWeek(-1)} className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 rounded-lg text-[0.8rem] font-semibold hover:border-acc hover:text-acc">←</button>
-        <span className="font-bold text-[0.84rem] min-w-[80px] text-center">{weekLabel}</span>
-        <button onClick={() => chWeek(1)} className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 rounded-lg text-[0.8rem] font-semibold hover:border-acc hover:text-acc">→</button>
-        <button onClick={() => setWeekOff(0)} className="bg-sf2 border border-acc text-acc px-3 py-1.5 rounded-lg text-[0.8rem] font-semibold">오늘</button>
+        <button onClick={() => chWeek(-1)} className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg text-[0.8rem] md:text-[0.95rem] font-semibold hover:border-acc hover:text-acc">←</button>
+        <span className="font-bold text-[0.84rem] md:text-[1rem] min-w-[80px] md:min-w-[110px] text-center">{weekLabel}</span>
+        <button onClick={() => chWeek(1)} className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg text-[0.8rem] md:text-[0.95rem] font-semibold hover:border-acc hover:text-acc">→</button>
+        <button onClick={() => setWeekOff(0)} className="bg-sf2 border border-acc text-acc px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[0.8rem] md:text-[0.95rem] font-semibold">오늘</button>
       </div>
 
       <WeekTabs
@@ -144,13 +143,13 @@ export function SchedulePage() {
           <div className="flex gap-1.5 mb-2.5 overflow-x-auto no-scrollbar">
             {days.map((d, i) => {
               const s = fmtDateToISO(d);
-              const on = s === allDay;
+              const on = i === dayIdx;
               const isT = s === TODAY;
               const hasMemo = !!(db.memos || {})[s];
               return (
                 <button
                   key={s}
-                  onClick={() => setAllDay(s)}
+                  onClick={() => setDayIdx(i)}
                   className={`relative px-3 py-1.5 rounded-lg border-[1.5px] text-[0.8rem] font-bold whitespace-nowrap flex-shrink-0 ${
                     on
                       ? "bg-acc text-black border-acc"
@@ -258,7 +257,7 @@ function ModeBtn({ active, onClick, children }: { active: boolean; onClick: () =
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-1.5 rounded-lg text-[0.78rem] font-bold border-[1.5px] whitespace-nowrap ${
+      className={`px-3 py-1.5 md:px-4 md:py-2.5 rounded-lg text-[0.78rem] md:text-[0.95rem] font-bold border-[1.5px] whitespace-nowrap ${
         active ? "bg-acc text-black border-acc" : "bg-sf2 text-mu border-bd hover:border-acc hover:text-acc"
       }`}
     >
@@ -282,18 +281,22 @@ function SingleTrainerView({
   zoom: number;
   onOpenAction: (ctx: ActionContext) => void;
 }) {
-  const colMin = Math.round(75 * zoom);
   const rowMin = Math.round(56 * zoom);
   const { mutate } = useStore();
   const t = getTrainer(tid)!;
+  const [wrapRef, containerW] = useContainerWidth<HTMLDivElement>();
+  const stickyW = 52;
+  const wideScreen = containerW > 800;
+  const defaultDataW = wideScreen
+    ? Math.floor((containerW - stickyW) / days.length)
+    : 90;
+  const colMin = Math.max(48, Math.round(defaultDataW * zoom));
   return (
-    <div className="overflow-x-auto rounded-xl border border-bd w-full">
+    <div ref={wrapRef} className="overflow-x-auto rounded-xl border border-bd w-full">
       <div
         className="grid bg-sf"
         style={{
-          gridTemplateColumns: `52px repeat(6, minmax(${colMin}px, 1fr))`,
-          minWidth: 500,
-          width: "max-content",
+          gridTemplateColumns: `${stickyW}px repeat(${days.length}, ${colMin}px)`,
         }}
       >
         <div className="bg-sf2 px-1.5 py-2 border-b-2 border-bd border-r border-r-bd flex items-center justify-center">
@@ -436,14 +439,15 @@ function AllTrainerDayView({
   zoom: number;
   onOpenAction: (ctx: ActionContext) => void;
 }) {
-  const baseColW = Math.round(110 * zoom);
   const rowMin = Math.round(56 * zoom);
   const { mutate } = useStore();
   const [wrapRef, containerW] = useContainerWidth<HTMLDivElement>();
   const stickyW = 56;
-  const fillColW =
-    containerW > 0 ? Math.max(baseColW, Math.floor((containerW - stickyW) / TRAINERS.length)) : baseColW;
-  const colW = fillColW;
+  const wideScreen = containerW > 800;
+  const defaultDataW = wideScreen
+    ? Math.floor((containerW - stickyW) / TRAINERS.length)
+    : 110;
+  const colW = Math.max(48, Math.round(defaultDataW * zoom));
   const d = new Date(ds + "T00:00:00");
   const label = ds === TODAY ? "오늘" : `${d.getMonth() + 1}/${d.getDate()}`;
 
@@ -555,14 +559,16 @@ function WeekAllView({
   zoom: number;
   onOpenAction: (ctx: ActionContext) => void;
 }) {
-  const baseColW = Math.round(90 * zoom);
   const rowMin = Math.round(40 * zoom);
   const [wrapRef, containerW] = useContainerWidth<HTMLDivElement>();
   const timeW = 56;
-  const trainerW = 64;
+  const trainerW = 78;
   const stickyW = timeW + trainerW;
-  const colMin =
-    containerW > 0 ? Math.max(baseColW, Math.floor((containerW - stickyW) / days.length)) : baseColW;
+  const wideScreen = containerW > 800;
+  const defaultDataW = wideScreen
+    ? Math.floor((containerW - stickyW) / days.length)
+    : 85;
+  const colMin = Math.max(40, Math.round(defaultDataW * zoom));
   const { mutate } = useStore();
 
   return (
@@ -583,7 +589,7 @@ function WeekAllView({
             <th className="sticky top-0 left-0 z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd font-bebas text-[0.85rem] text-acc text-center">
               시간
             </th>
-            <th className="sticky top-0 left-[56px] z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd text-[0.72rem] text-tx text-center font-bold">
+            <th className="sticky top-0 left-[56px] z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd text-[0.72rem] md:text-[0.85rem] text-tx text-center font-bold whitespace-nowrap">
               트레이너
             </th>
             {days.map((d, i) => {
@@ -607,11 +613,14 @@ function WeekAllView({
         </thead>
         <tbody>
           {HOURS.map((h) =>
-            TRAINERS.map((t, ti) => (
+            TRAINERS.map((t, ti) => {
+              const isLastTrainer = ti === TRAINERS.length - 1;
+              const rowEndCls = isLastTrainer ? "border-b-2 border-b-[#4a4a68]" : "border-b border-b-bd";
+              return (
               <tr key={h + t.id}>
                 {ti === 0 && (
                   <td
-                    className="sticky left-0 z-[2] bg-sf px-1 text-[0.78rem] text-tx font-semibold border-r border-r-bd border-b border-b-bd text-center align-middle font-bebas tracking-wider"
+                    className={`sticky left-0 z-[2] bg-sf px-1 text-[0.82rem] md:text-[1rem] text-tx font-semibold border-r border-r-bd text-center align-middle font-bebas tracking-wider border-b-2 border-b-[#4a4a68]`}
                     rowSpan={TRAINERS.length}
                     style={{ height: rowMin * TRAINERS.length }}
                   >
@@ -619,7 +628,7 @@ function WeekAllView({
                   </td>
                 )}
                 <td
-                  className="sticky left-[56px] z-[2] bg-sf px-1 py-1 text-[0.72rem] font-bold border-r border-r-bd border-b border-b-bd whitespace-nowrap text-center"
+                  className={`sticky left-[56px] z-[2] bg-sf px-1 py-1 text-[0.72rem] md:text-[0.86rem] font-bold border-r border-r-bd whitespace-nowrap text-center ${rowEndCls}`}
                   style={{ color: t.hex, height: rowMin }}
                 >
                   {t.name}
@@ -641,7 +650,7 @@ function WeekAllView({
                   return (
                     <td
                       key={ds}
-                      className={`p-[2px] border-r border-r-bd border-b border-b-bd align-middle cursor-pointer hover:bg-white/[0.04] ${cls}`}
+                      className={`p-[2px] border-r border-r-bd align-middle cursor-pointer hover:bg-white/[0.04] ${rowEndCls} ${cls}`}
                       style={{ height: rowMin }}
                       onClick={(e) => {
                         const tgt = e.target as HTMLElement;
@@ -667,7 +676,8 @@ function WeekAllView({
                   );
                 })}
               </tr>
-            ))
+              );
+            })
           )}
         </tbody>
       </table>
