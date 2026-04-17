@@ -23,6 +23,7 @@ type Action =
   | "rebook"
   | "del"
   | "delOnce"
+  | "setEnd"
   | "unblock"
   | "memo";
 
@@ -32,12 +33,14 @@ export function ActionMenu({
   onBookOrEdit,
   onBlock,
   onMemo,
+  onSetEnd,
 }: {
   ctx: ActionContext;
   onClose: () => void;
   onBookOrEdit: (mode: "book" | "edit", existing: Session | null) => void;
   onBlock: () => void;
   onMemo: () => void;
+  onSetEnd: (fixedId: string) => void;
 }) {
   const { db, mutate } = useStore();
   const isMobile = useIsMobile();
@@ -66,6 +69,10 @@ export function ActionMenu({
     }
     if (a === "memo") {
       onMemo();
+      return;
+    }
+    if (a === "setEnd" && sess?.fixedId) {
+      onSetEnd(sess.fixedId);
       return;
     }
     if (a === "unblock") {
@@ -124,7 +131,11 @@ export function ActionMenu({
     }
     if (a === "del" && sess) {
       if (sess.isFixed) {
-        if (!confirm("⚠️ 고정일정 전체를 삭제합니다 (매주 반복 전부).\n\n이번 날짜만 빼려면 취소 후 '이번만 삭제'를 선택하세요.\n\n전체 삭제 진행할까요?"))
+        if (
+          !confirm(
+            "⚠️ 고정일정 전체 삭제\n\n과거 수업 기록까지 통계에서 사라집니다!\n\n다음 주부터 안 오시는 경우엔 '종료일 지정'을 사용하세요 (과거 기록 유지).\n\n그래도 전체 삭제할까요?"
+          )
+        )
           return onClose();
         mutate("고정일정 전체 삭제", (d) => {
           d.fixedSchedules = d.fixedSchedules.filter((f) => f.id !== sess.fixedId);
@@ -162,6 +173,7 @@ export function ActionMenu({
     { a: "restore", label: "캔슬 취소", icon: "↩️", cls: "text-green", show: hasS && isCan },
     { a: "rebook", label: "이 자리 재예약", icon: "🔄", show: hasS && isCan },
     { a: "delOnce", label: "이번만 삭제", icon: "🗑", cls: "text-red", show: hasS && isFixed },
+    { a: "setEnd", label: "종료일 지정 (이후 중단)", icon: "📅", cls: "text-orange", show: hasS && isFixed },
     { a: "del", label: isFixed ? "고정 전체 삭제" : "수업 삭제", icon: "🗑", cls: "text-red", show: hasS },
     { a: "unblock", label: "차단 해제", icon: "✅", cls: "text-[#c9a800]", show: isB },
   ];

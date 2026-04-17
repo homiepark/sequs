@@ -21,6 +21,7 @@ import { SessionModal } from "../schedule/SessionModal";
 import { BulkBlockModal } from "../schedule/BulkBlockModal";
 import { MemoBar } from "../schedule/MemoBar";
 import { SessionMemoModal } from "../schedule/SessionMemoModal";
+import { FixedEndDateModal } from "../schedule/FixedEndDateModal";
 import { WeekTabs } from "../schedule/WeekTabs";
 import { useGridGestures } from "@/lib/useGridGestures";
 import { useContainerWidth } from "@/lib/useContainerWidth";
@@ -53,6 +54,7 @@ export function SchedulePage() {
     tid: TrainerId;
     sess: Session | null;
   } | null>(null);
+  const [endDateModal, setEndDateModal] = useState<string | null>(null);
 
   const now = useMemo(() => new Date(), []);
   const days = useMemo(() => weekDates(weekOff), [weekOff]);
@@ -217,6 +219,10 @@ export function SchedulePage() {
             });
             setAction(null);
           }}
+          onSetEnd={(fixedId) => {
+            setEndDateModal(fixedId);
+            setAction(null);
+          }}
         />
       )}
 
@@ -248,6 +254,21 @@ export function SchedulePage() {
           onClose={() => setMemoModal(null)}
         />
       )}
+
+      {endDateModal && (() => {
+        const f = db.fixedSchedules.find((x) => x.id === endDateModal);
+        if (!f) return null;
+        const mem = f.mid ? db.members.find((m) => m.id === f.mid) : null;
+        const name = f.customName || mem?.name || "?";
+        return (
+          <FixedEndDateModal
+            fixedId={endDateModal}
+            currentEnd={f.endDate || null}
+            memberName={name}
+            onClose={() => setEndDateModal(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
