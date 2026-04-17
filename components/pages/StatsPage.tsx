@@ -67,11 +67,14 @@ export function StatsPage() {
     reader.readAsText(file);
   }
 
-  function copyTbl(rows: [string, number][], notifyId: string) {
+  function copyTbl(
+    rows: [string, { count: number; isGuest: boolean; name: string }][],
+    notifyId: string
+  ) {
     let text = "#\t회원\t출석 횟수\n";
-    rows.forEach(([mid, cnt], i) => {
-      const m = getMember(db, mid);
-      text += `${i + 1}\t${m?.name || "?"}\t${cnt}\n`;
+    rows.forEach(([, v], i) => {
+      const label = v.isGuest ? `미등록 · ${v.name}` : v.name;
+      text += `${i + 1}\t${label}\t${v.count}\n`;
     });
     navigator.clipboard.writeText(text).then(() => {
       const n = document.getElementById(notifyId);
@@ -125,12 +128,20 @@ export function StatsPage() {
       <div>
         {trainersToShow.map((t) => {
           const tp = present.filter((s) => s.tid === t.id);
-          const mc: Record<string, number> = {};
+          const mc: Record<string, { count: number; isGuest: boolean; name: string }> = {};
           tp.forEach((s) => {
-            const key = s.mid || s.customName || "?";
-            mc[key] = (mc[key] || 0) + 1;
+            if (s.mid) {
+              const m = getMember(db, s.mid);
+              const key = s.mid;
+              if (!mc[key]) mc[key] = { count: 0, isGuest: false, name: m?.name || "?" };
+              mc[key].count++;
+            } else {
+              const key = "guest_" + (s.customName || "?");
+              if (!mc[key]) mc[key] = { count: 0, isGuest: true, name: s.customName || "?" };
+              mc[key].count++;
+            }
           });
-          const sorted = Object.entries(mc).sort((a, b) => b[1] - a[1]);
+          const sorted = Object.entries(mc).sort((a, b) => b[1].count - a[1].count);
           const nid = `notify_${t.id}`;
           return (
             <div key={t.id} className="bg-sf border rounded-xl p-4 mb-3.5" style={{ borderColor: t.hex + "30" }}>
@@ -160,9 +171,7 @@ export function StatsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sorted.map(([k, cnt], i) => {
-                        const m = getMember(db, k);
-                        const name = m?.name || k || "?";
+                      {sorted.map(([k, v], i) => {
                         const rankColor =
                           i === 0 ? "text-[#ffd700]" : i === 1 ? "text-[#c0c0c0]" : i === 2 ? "text-[#cd7f32]" : "text-mu";
                         return (
@@ -170,8 +179,13 @@ export function StatsPage() {
                             <td className="px-3 py-2 text-[0.8rem] border-b border-bd">
                               <span className={`font-bebas text-[0.95rem] ${rankColor}`}>{i + 1}</span>
                             </td>
-                            <td className="px-3 py-2 text-[0.8rem] border-b border-bd font-bold">{name}</td>
-                            <td className="px-3 py-2 text-[0.8rem] border-b border-bd">{cnt}회</td>
+                            <td className="px-3 py-2 text-[0.8rem] border-b border-bd font-bold">
+                              {v.isGuest && (
+                                <span className="text-[0.66rem] text-mu mr-1.5 font-medium">미등록 ·</span>
+                              )}
+                              {v.name}
+                            </td>
+                            <td className="px-3 py-2 text-[0.8rem] border-b border-bd">{v.count}회</td>
                           </tr>
                         );
                       })}

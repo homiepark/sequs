@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { HOURS, TRAINERS, type Session, type TrainerId } from "@/lib/types";
+import { TRAINERS, type Session, type TrainerId } from "@/lib/types";
 import { Modal } from "../ui/Modal";
+import { MemberAutocomplete, type MemberSelection } from "./MemberAutocomplete";
 
 export function SessionModal({
   date,
@@ -19,10 +20,10 @@ export function SessionModal({
 }) {
   const { db, mutate } = useStore();
   const [tid, setTid] = useState<TrainerId>(initTid);
-  const [useCustomName, setUseCustomName] = useState(false);
-  const [customName, setCustomName] = useState("");
-  const [showAllMem, setShowAllMem] = useState(false);
-  const [mid, setMid] = useState<string>(existing?.mid || "");
+  const [sel, setSel] = useState<MemberSelection>({
+    mid: existing?.mid || null,
+    customName: existing?.customName || null,
+  });
   const [isHalf, setIsHalf] = useState<boolean>(
     !!(existing && existing.time && existing.time.endsWith(":30"))
   );
@@ -31,17 +32,6 @@ export function SessionModal({
   const [fixedStart, setFixedStart] = useState(date);
   const [fixedEnd, setFixedEnd] = useState("");
   const [noEnd, setNoEnd] = useState(false);
-
-  const memList = useMemo(() => {
-    const list = showAllMem ? db.members : db.members.filter((m) => m.tid === tid);
-    return list.length ? list : db.members;
-  }, [db.members, tid, showAllMem]);
-
-  useEffect(() => {
-    if (!useCustomName && memList.length && !memList.find((m) => m.id === mid)) {
-      setMid(memList[0].id);
-    }
-  }, [memList, mid, useCustomName]);
 
   const preview = useMemo(() => {
     if (!isFixed || !fixedStart) return "";
@@ -62,12 +52,28 @@ export function SessionModal({
     return "📌 " + msg;
   }, [isFixed, fixedStart, fixedEnd, noEnd, time]);
 
+  function registerNew(name: string): string {
+    const newId = "m" + Date.now();
+    mutate("새 회원 등록", (d) => {
+      d.members.push({
+        id: newId,
+        name,
+        phone: "",
+        tid,
+        tids: [tid],
+      });
+    });
+    return newId;
+  }
+
   function save() {
-    if (useCustomName && !customName.trim()) return alert("이름을 입력해주세요");
+    if (!sel.mid && !sel.customName) {
+      return alert("회원을 선택하거나 이름을 입력해주세요");
+    }
     const baseTime = time.replace(":30", ":00");
     const actualTime = isHalf ? baseTime.replace(":00", ":30") : baseTime;
-    const cname = useCustomName ? customName.trim() : null;
-    const memId = useCustomName ? null : mid;
+    const cname = sel.customName;
+    const memId = sel.mid;
 
     if (isFixed && !existing) {
       if (!noEnd && !fixedEnd) return alert("종료일을 선택해주세요");
@@ -176,54 +182,16 @@ export function SessionModal({
         </select>
       </Field>
 
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-[0.71rem] text-mu font-medium">회원</label>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={useCustomName}
-              onChange={(e) => setUseCustomName(e.target.checked)}
-              className="w-3.5 h-3.5 cursor-pointer"
-            />
-            <span className="text-[0.75rem] text-mu">직접 입력 (미등록)</span>
-          </label>
-        </div>
-        {useCustomName ? (
-          <input
-            placeholder="이름 직접 입력"
-            value={customName}
-            onChange={(e) => setCustomName(e.target.value)}
-            className="w-full bg-sf2 border border-bd text-tx px-2.5 py-2 rounded-lg text-[0.84rem]"
-          />
-        ) : (
-          <>
-            <select
-              value={mid}
-              onChange={(e) => setMid(e.target.value)}
-              className="w-full bg-sf2 border border-bd text-tx px-2.5 py-2 rounded-lg text-[0.84rem]"
-            >
-              {memList.map((m) => {
-                const t = TRAINERS.find((x) => x.id === m.tid);
-                return (
-                  <option key={m.id} value={m.id}>
-                    {showAllMem ? `${m.name} (${t?.name || "미배정"})` : m.name}
-                  </option>
-                );
-              })}
-            </select>
-            <label className="flex items-center gap-1.5 mt-2 cursor-pointer w-fit">
-              <input
-                type="checkbox"
-                checked={showAllMem}
-                onChange={(e) => setShowAllMem(e.target.checked)}
-                className="w-[15px] h-[15px] cursor-pointer"
-              />
-              <span className="text-[0.76rem] text-mu">전체 회원 보기</span>
-            </label>
-          </>
-        )}
-      </div>
+      <Field label="회원">
+        <MemberAutocomplete
+          db={db}
+          tid={tid}
+          initialMid={sel.mid}
+          initialCustomName={sel.customName}
+          onChange={setSel}
+          onRegisterNew={registerNew}
+        />
+      </Field>
 
       {!existing && (
         <div className="bg-sf2 rounded-[10px] p-3 mb-1">
@@ -297,13 +265,6 @@ export function SessionModal({
           저장
         </button>
       </div>
-
-      {/* Unused hour select kept for HOURS reference */}
-      <datalist id="hour-list">
-        {HOURS.map((h) => (
-          <option key={h} value={h} />
-        ))}
-      </datalist>
     </Modal>
   );
 }

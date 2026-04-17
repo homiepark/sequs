@@ -29,10 +29,12 @@ export function ActionMenu({
   ctx,
   onClose,
   onBookOrEdit,
+  onBlock,
 }: {
   ctx: ActionContext;
   onClose: () => void;
   onBookOrEdit: (mode: "book" | "edit", existing: Session | null) => void;
+  onBlock: () => void;
 }) {
   const { db, mutate } = useStore();
   const isMobile = useIsMobile();
@@ -56,13 +58,20 @@ export function ActionMenu({
       return;
     }
     if (a === "block") {
-      mutate("시간 차단", (d) => {
-        d.blocks[bKey] = true;
-      });
+      onBlock();
+      return;
     }
     if (a === "unblock") {
       mutate("차단 해제", (d) => {
         delete d.blocks[bKey];
+        // Also remove matching fixedBlock entry for this slot if any
+        const dow = new Date(date + "T00:00:00").getDay();
+        const dowA = dow === 0 ? 7 : dow;
+        d.fixedBlocks = (d.fixedBlocks || []).map((fb) => {
+          if (fb.dayOfWeek !== dowA) return fb;
+          if (fb.tid !== "all" && fb.tid !== tid) return fb;
+          return { ...fb, times: fb.times.filter((t) => t !== time) };
+        }).filter((fb) => fb.times.length > 0);
       });
     }
     if (a === "precan" && sess) {

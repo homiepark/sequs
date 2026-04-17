@@ -7,6 +7,7 @@ import {
   fmtDateToISO,
   getSessionsForDate,
   getTrainer,
+  isSlotBlocked,
   weekDates,
   type Session,
   type TrainerId,
@@ -17,6 +18,7 @@ import { SessionCard } from "../schedule/SessionCard";
 import { CancelChips } from "../schedule/CancelChips";
 import { ActionMenu, type ActionContext } from "../schedule/ActionMenu";
 import { SessionModal } from "../schedule/SessionModal";
+import { BulkBlockModal } from "../schedule/BulkBlockModal";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -35,6 +37,7 @@ export function SchedulePage() {
     tid: TrainerId;
     existing: Session | null;
   } | null>(null);
+  const [blockModal, setBlockModal] = useState<{ date: string; time: string; tid: TrainerId } | null>(null);
 
   const now = useMemo(() => new Date(), []);
   const days = useMemo(() => weekDates(weekOff), [weekOff]);
@@ -169,6 +172,10 @@ export function SchedulePage() {
             });
             setAction(null);
           }}
+          onBlock={() => {
+            setBlockModal({ date: action.date, time: action.time, tid: action.tid });
+            setAction(null);
+          }}
         />
       )}
 
@@ -179,6 +186,15 @@ export function SchedulePage() {
           tid={modal.tid}
           existing={modal.existing}
           onClose={() => setModal(null)}
+        />
+      )}
+
+      {blockModal && (
+        <BulkBlockModal
+          date={blockModal.date}
+          time={blockModal.time}
+          tid={blockModal.tid}
+          onClose={() => setBlockModal(null)}
         />
       )}
     </div>
@@ -255,7 +271,7 @@ function SingleTrainerView({
                 allSess.find((s) => s.time === h && s.tid === tid) ||
                 allSess.find((s) => s.time === hHalf && s.tid === tid) ||
                 null;
-              const isB = !!db.blocks[`${ds}_${tid}_${h}`];
+              const isB = isSlotBlocked(db, ds, tid, h);
               const isLast = di === days.length - 1;
               return (
                 <Cell
@@ -385,7 +401,7 @@ function AllTrainerDayView({
                   allSess.find((s) => s.time === h && s.tid === t.id) ||
                   allSess.find((s) => s.time === hHalf && s.tid === t.id) ||
                   null;
-                const isB = !!db.blocks[`${ds}_${t.id}_${h}`];
+                const isB = isSlotBlocked(db, ds, t.id, h);
                 const cls = isB
                   ? "blocked-pattern cursor-default"
                   : sess
@@ -500,7 +516,7 @@ function WeekAllView({
                     allSess.find((s) => s.time === h && s.tid === t.id) ||
                     allSess.find((s) => s.time === hHalf && s.tid === t.id) ||
                     null;
-                  const isB = !!db.blocks[`${ds}_${t.id}_${h}`];
+                  const isB = isSlotBlocked(db, ds, t.id, h);
                   const cls = isB
                     ? "blocked-pattern cursor-default"
                     : sess

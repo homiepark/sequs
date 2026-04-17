@@ -6,6 +6,8 @@ import {
   TRAINERS,
   getSessionsForDate,
   getTrainer,
+  memberHasTrainer,
+  memberTrainers,
   type DB,
   type Member,
   type TrainerId,
@@ -48,7 +50,7 @@ export function MembersPage() {
 
   const filtered = useMemo(() => {
     let list = db.members.filter((m) => m.name.toLowerCase().includes(q.toLowerCase()));
-    if (trF !== "all") list = list.filter((m) => m.tid === trF);
+    if (trF !== "all") list = list.filter((m) => memberHasTrainer(m, trF as TrainerId));
     return list;
   }, [db.members, q, trF]);
 
@@ -120,7 +122,7 @@ export function MembersPage() {
       ) : (
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))" }}>
           {filtered.map((m, i) => {
-            const t = getTrainer(m.tid);
+            const tids = memberTrainers(m);
             const mA = cntAtt(m.id, ym);
             const tA = cntAtt(m.id, null);
             const last = lastVisit(m.id);
@@ -133,15 +135,27 @@ export function MembersPage() {
                   >
                     {m.name[0]}
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="font-bold text-[0.87rem]">{m.name}</div>
-                    <div className="text-[0.69rem] text-mu mt-0.5">
-                      {t ? (
-                        <span style={{ color: t.hex }}>{t.name}</span>
+                    <div className="text-[0.69rem] text-mu mt-0.5 flex flex-wrap gap-1 items-center">
+                      {tids.length ? (
+                        tids.map((id) => {
+                          const t = getTrainer(id);
+                          if (!t) return null;
+                          return (
+                            <span
+                              key={id}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[0.64rem] font-bold"
+                              style={{ color: t.hex, borderColor: t.hex + "55" }}
+                            >
+                              {t.name}
+                            </span>
+                          );
+                        })
                       ) : (
-                        " 미배정"
+                        <span>미배정</span>
                       )}
-                      {m.phone && " · " + m.phone}
+                      {m.phone && <span>· {m.phone}</span>}
                     </div>
                   </div>
                 </div>
@@ -209,22 +223,34 @@ function MemberModal({
   const { mutate } = useStore();
   const [name, setName] = useState(member?.name || "");
   const [phone, setPhone] = useState(member?.phone || "");
-  const [tid, setTid] = useState<TrainerId>((member?.tid || "t1") as TrainerId);
+  const [tids, setTids] = useState<TrainerId[]>(member ? memberTrainers(member) : []);
+
+  function toggleTid(id: TrainerId) {
+    setTids((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
 
   function save() {
     if (!name.trim()) return alert("이름을 입력해주세요");
+    if (!tids.length) return alert("담당 트레이너를 최소 1명 선택해주세요");
     if (member) {
       mutate("회원 수정", (d) => {
         const m = d.members.find((x) => x.id === member.id);
         if (m) {
           m.name = name.trim();
           m.phone = phone;
-          m.tid = tid;
+          m.tid = tids[0];
+          m.tids = tids;
         }
       });
     } else {
       mutate("회원 추가", (d) => {
-        d.members.push({ id: "m" + Date.now(), name: name.trim(), phone, tid });
+        d.members.push({
+          id: "m" + Date.now(),
+          name: name.trim(),
+          phone,
+          tid: tids[0],
+          tids,
+        });
       });
     }
     onClose();
@@ -251,18 +277,28 @@ function MemberModal({
         />
       </div>
       <div className="mb-3">
-        <label className="block text-[0.71rem] text-mu mb-1 font-medium">담당 트레이너</label>
-        <select
-          value={tid}
-          onChange={(e) => setTid(e.target.value as TrainerId)}
-          className="w-full bg-sf2 border border-bd text-tx px-2.5 py-2 rounded-lg text-[0.84rem]"
-        >
-          {TRAINERS.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+        <label className="block text-[0.71rem] text-mu mb-1 font-medium">담당 트레이너 (여러 명 선택 가능)</label>
+        <div className="grid grid-cols-2 gap-2">
+          {TRAINERS.map((t) => {
+            const on = tids.includes(t.id);
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => toggleTid(t.id)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border-[1.5px] text-[0.82rem] font-bold transition"
+                style={{
+                  background: on ? t.hex : "transparent",
+                  borderColor: on ? t.hex : "var(--bd)",
+                  color: on ? "#000" : "var(--mu)",
+                }}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ background: t.hex }} />
+                {t.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
       <div className="flex gap-2 mt-3.5">
         <button onClick={onClose} className="flex-1 py-2.5 rounded-lg bg-sf2 text-tx font-bold text-[0.83rem] border-none">

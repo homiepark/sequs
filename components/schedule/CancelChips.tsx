@@ -26,6 +26,8 @@ export function CancelChips({ ds, time, tid }: { ds: string; time: string; tid: 
             data-stop="1"
             onClick={(e) => {
               e.stopPropagation();
+              if (!confirm(`"${h.memName}" ${h.type === "precancel" ? "사전캔슬" : "당일캔슬"} 기록과 스케줄을 완전히 삭제할까요?`))
+                return;
               mutate("캔슬 기록 삭제", (d) => {
                 d.cancelHistory = (d.cancelHistory || []).filter((x) => x.id !== h.id);
                 const sess = getSessionsForDate(d, ds).find(

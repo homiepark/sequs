@@ -11,6 +11,16 @@ export interface Member {
   name: string;
   phone: string;
   tid: TrainerId;
+  tids?: TrainerId[];
+}
+
+export function memberTrainers(m: Member): TrainerId[] {
+  if (m.tids && m.tids.length) return m.tids;
+  return m.tid ? [m.tid] : [];
+}
+
+export function memberHasTrainer(m: Member, tid: TrainerId): boolean {
+  return memberTrainers(m).includes(tid);
 }
 
 export interface Session {
@@ -36,6 +46,16 @@ export interface FixedSchedule {
   skippedDates?: string[];
 }
 
+export interface FixedBlock {
+  id: string;
+  tid: TrainerId | "all";
+  dayOfWeek: number;
+  times: string[];
+  label?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
 export type AttStatus = "present" | "absent" | "precancel" | "daycancel";
 
 export interface CancelHistoryEntry {
@@ -53,6 +73,7 @@ export interface DB {
   members: Member[];
   sessions: Session[];
   fixedSchedules: FixedSchedule[];
+  fixedBlocks?: FixedBlock[];
   att: Record<string, AttStatus>;
   blocks: Record<string, boolean>;
   cancelHistory: CancelHistoryEntry[];
@@ -82,6 +103,7 @@ export function emptyDB(): DB {
     ],
     sessions: [],
     fixedSchedules: [],
+    fixedBlocks: [],
     att: {},
     blocks: {},
     cancelHistory: [],
@@ -90,14 +112,34 @@ export function emptyDB(): DB {
 
 export function normalizeDB(raw: unknown): DB {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const rawMembers = Array.isArray(r.members) ? (r.members as Member[]) : [];
+  const members = rawMembers.map((m) => ({
+    ...m,
+    tids: m.tids && Array.isArray(m.tids) && m.tids.length ? m.tids : m.tid ? [m.tid] : [],
+  }));
   return {
-    members: Array.isArray(r.members) ? (r.members as Member[]) : [],
+    members,
     sessions: Array.isArray(r.sessions) ? (r.sessions as Session[]) : [],
     fixedSchedules: Array.isArray(r.fixedSchedules) ? (r.fixedSchedules as FixedSchedule[]) : [],
+    fixedBlocks: Array.isArray(r.fixedBlocks) ? (r.fixedBlocks as FixedBlock[]) : [],
     att: r.att && typeof r.att === "object" ? (r.att as Record<string, AttStatus>) : {},
     blocks: r.blocks && typeof r.blocks === "object" ? (r.blocks as Record<string, boolean>) : {},
     cancelHistory: Array.isArray(r.cancelHistory) ? (r.cancelHistory as CancelHistoryEntry[]) : [],
   };
+}
+
+export function isSlotBlocked(db: DB, ds: string, tid: TrainerId, time: string): boolean {
+  if (db.blocks[`${ds}_${tid}_${time}`]) return true;
+  if (!db.fixedBlocks || !db.fixedBlocks.length) return false;
+  const dow = new Date(ds + "T00:00:00").getDay();
+  const dowA = dow === 0 ? 7 : dow;
+  return db.fixedBlocks.some((fb) => {
+    if (fb.dayOfWeek !== dowA) return false;
+    if (fb.startDate && ds < fb.startDate) return false;
+    if (fb.endDate && ds > fb.endDate) return false;
+    if (fb.tid !== "all" && fb.tid !== tid) return false;
+    return fb.times.includes(time);
+  });
 }
 
 export function getTrainer(id: string): Trainer | undefined {
