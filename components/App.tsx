@@ -13,9 +13,12 @@ import { useStore } from "@/lib/store";
 export type Page = "schedule" | "fixed" | "attendance" | "members" | "stats";
 
 export function App() {
+  const [mounted, setMounted] = useState(false);
   const [page, setPage] = useState<Page>("schedule");
   const { undo, lastAction } = useStore();
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!lastAction) return;
@@ -38,6 +41,14 @@ export function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [undo]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-mu text-sm">
+        로딩 중…
+      </div>
+    );
+  }
 
   return (
     <>

@@ -43,7 +43,7 @@ function writeLocal(db: DB) {
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [db, setDb] = useState<DB>(() => readLocal());
+  const [db, setDb] = useState<DB>(() => emptyDB());
   const [sync, setSync] = useState<SyncState>("local");
   const [lastAction, setLastAction] = useState<string | null>(null);
   const historyRef = useRef<{ label: string; db: DB }[]>([]);
@@ -51,31 +51,50 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const remoteApplyingRef = useRef(false);
 
   useEffect(() => {
-    const unsub = subscribeDB((remote) => {
-      if (remote) {
-        remoteApplyingRef.current = true;
-        setDb((prev) => {
-          if (JSON.stringify(prev) === JSON.stringify(remote)) return prev;
-          return remote;
-        });
-        setSync("syncing");
-        writeLocal(remote);
-        setTimeout(() => (remoteApplyingRef.current = false), 0);
-      }
-    });
-    return () => unsub();
+    setDb(readLocal());
+  }, []);
+
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    try {
+      unsub = subscribeDB((remote) => {
+        if (remote) {
+          remoteApplyingRef.current = true;
+          setDb((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(remote)) return prev;
+            return remote;
+          });
+          setSync("syncing");
+          writeLocal(remote);
+          setTimeout(() => (remoteApplyingRef.current = false), 0);
+        }
+      });
+    } catch (e) {
+      console.warn("Firebase init failed:", e);
+      setSync("error");
+    }
+    return () => {
+      if (unsub) unsub();
+    };
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const today = new Date().toISOString().slice(0, 10);
-    const last = localStorage.getItem(LS_BACKUP_DATE);
+    let last: string | null = null;
+    try {
+      last = localStorage.getItem(LS_BACKUP_DATE);
+    } catch {}
     if (last !== today) {
-      writeBackupSnapshot(db).then(() => {
-        try {
-          localStorage.setItem(LS_BACKUP_DATE, today);
-        } catch {}
-      });
+      try {
+        writeBackupSnapshot(db)
+          .then(() => {
+            try {
+              localStorage.setItem(LS_BACKUP_DATE, today);
+            } catch {}
+          })
+          .catch(() => {});
+      } catch {}
     }
   }, [db]);
 
