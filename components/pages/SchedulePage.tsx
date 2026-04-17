@@ -619,10 +619,16 @@ function WeekAllView({
         </colgroup>
         <thead>
           <tr>
-            <th className="sticky top-0 left-0 z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd font-bebas text-[0.85rem] text-acc text-center">
+            <th
+              className="sticky top-0 left-0 z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd font-bebas text-[0.85rem] text-acc text-center"
+              style={{ width: timeW, minWidth: timeW, maxWidth: timeW }}
+            >
               시간
             </th>
-            <th className="sticky top-0 left-[56px] z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd text-[0.72rem] md:text-[0.85rem] text-tx text-center font-bold whitespace-nowrap">
+            <th
+              className="sticky top-0 z-[5] bg-sf2 px-1 py-2 border-b-2 border-b-acc border-r border-r-bd text-[0.72rem] md:text-[0.85rem] text-tx text-center font-bold whitespace-nowrap"
+              style={{ left: timeW, width: trainerW, minWidth: trainerW, maxWidth: trainerW }}
+            >
               트레이너
             </th>
             {days.map((d, i) => {
@@ -655,14 +661,21 @@ function WeekAllView({
                   <td
                     className={`sticky left-0 z-[2] bg-sf px-1 text-[0.82rem] md:text-[1rem] text-tx font-semibold border-r border-r-bd text-center align-middle font-bebas tracking-wider border-b-2 border-b-[#4a4a68]`}
                     rowSpan={TRAINERS.length}
-                    style={{ height: rowMin * TRAINERS.length }}
+                    style={{ width: timeW, minWidth: timeW, maxWidth: timeW }}
                   >
                     {h}
                   </td>
                 )}
                 <td
-                  className={`sticky left-[56px] z-[2] bg-sf px-1 py-1 text-[0.72rem] md:text-[0.86rem] font-bold border-r border-r-bd whitespace-nowrap text-center ${rowEndCls}`}
-                  style={{ color: t.hex, minHeight: rowMin }}
+                  className={`sticky z-[2] bg-sf px-1 py-1 text-[0.72rem] md:text-[0.86rem] font-bold border-r border-r-bd whitespace-nowrap text-center ${rowEndCls}`}
+                  style={{
+                    left: timeW,
+                    width: trainerW,
+                    minWidth: trainerW,
+                    maxWidth: trainerW,
+                    color: t.hex,
+                    minHeight: rowMin,
+                  }}
                 >
                   {t.name}
                 </td>

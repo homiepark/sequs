@@ -47,49 +47,55 @@ export function SessionCard({
   const subSize = Math.max(0.5, 0.58 * zoom);
   const tagSize = Math.max(0.48, 0.56 * zoom);
 
+  const showSecondRow = isAbsent || memoIndicator;
+
   return (
     <div className={cls} style={cardStyle}>
       <div
-        className="font-black text-black whitespace-normal leading-tight w-full"
+        className="font-black text-black whitespace-normal leading-tight w-full flex items-center justify-center gap-1 flex-wrap"
         style={{ wordBreak: "keep-all", fontSize: `${nameSize}rem` }}
-      >
-        {displayName}
-        {isHalf && (
-          <span className="font-black opacity-75 ml-1 align-middle" style={{ fontSize: `${subSize}rem` }}>
-            ·30
-          </span>
-        )}
-      </div>
-      <div
-        className="mt-0.5 flex items-center justify-center gap-0.5 w-full"
-        style={{ color: "rgba(0,0,0,0.55)", fontSize: `${subSize}rem` }}
       >
         {sess.isFixed && (
           <span
-            className="inline-block rounded px-1 font-bold tracking-wider bg-black/20 text-black"
+            className="inline-block rounded px-1 font-bold tracking-wider bg-black/25 text-black leading-none"
             style={{ fontSize: `${tagSize}rem` }}
           >
             고정
           </span>
         )}
-        {isAbsent && (
-          <span
-            className="inline-block rounded px-1 font-bold tracking-wider bg-red text-white"
-            style={{ fontSize: `${tagSize}rem` }}
-          >
-            결석
-          </span>
-        )}
-        {memoIndicator && (
-          <span
-            title={memoTip}
-            className="inline-flex items-center justify-center rounded px-1 font-bold bg-black/30 text-black"
-            style={{ fontSize: `${Math.max(0.52, 0.6 * zoom)}rem` }}
-          >
-            {memoIndicator}
-          </span>
-        )}
+        <span>
+          {displayName}
+          {isHalf && (
+            <span className="font-black opacity-75 ml-1 align-middle" style={{ fontSize: `${subSize}rem` }}>
+              ·30
+            </span>
+          )}
+        </span>
       </div>
+      {showSecondRow && (
+        <div
+          className="mt-0.5 flex items-center justify-center gap-0.5 w-full"
+          style={{ color: "rgba(0,0,0,0.55)", fontSize: `${subSize}rem` }}
+        >
+          {isAbsent && (
+            <span
+              className="inline-block rounded px-1 font-bold tracking-wider bg-red text-white"
+              style={{ fontSize: `${tagSize}rem` }}
+            >
+              결석
+            </span>
+          )}
+          {memoIndicator && (
+            <span
+              title={memoTip}
+              className="inline-flex items-center justify-center rounded px-1 font-bold bg-black/30 text-black"
+              style={{ fontSize: `${Math.max(0.52, 0.6 * zoom)}rem` }}
+            >
+              {memoIndicator}
+            </span>
+          )}
+        </div>
+      )}
       <button
         data-stop="1"
         onClick={(e) => {
