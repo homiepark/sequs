@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface GridGestureOptions {
   onSwipe?: (dir: -1 | 1) => void;
@@ -7,20 +7,21 @@ export interface GridGestureOptions {
   maxZoom?: number;
 }
 
-export function useGridGestures(
-  ref: React.RefObject<HTMLElement | null>,
-  opts: GridGestureOptions = {}
-) {
+export function useGridGestures(opts: GridGestureOptions = {}) {
   const { onSwipe, minZoom = 0.55, maxZoom = 1.6 } = opts;
   const [zoom, setZoom] = useState(1);
+  const [el, setEl] = useState<HTMLElement | null>(null);
   const startDist = useRef(0);
   const startZoom = useRef(1);
   const pinching = useRef(false);
   const lastTap = useRef(0);
   const swipeStart = useRef<{ x: number; y: number; t: number } | null>(null);
 
+  const setRef = useCallback((node: HTMLElement | null) => {
+    setEl(node);
+  }, []);
+
   useEffect(() => {
-    const el = ref.current;
     if (!el) return;
 
     function dist(e: TouchEvent) {
@@ -57,7 +58,6 @@ export function useGridGestures(
     function onEnd(e: TouchEvent) {
       if (e.touches.length < 2) pinching.current = false;
 
-      // Double-tap reset zoom
       if (e.touches.length === 0 && e.changedTouches.length === 1) {
         const now = Date.now();
         if (now - lastTap.current < 280) {
@@ -66,7 +66,6 @@ export function useGridGestures(
         lastTap.current = now;
       }
 
-      // Swipe detection (horizontal)
       if (onSwipe && !pinching.current && swipeStart.current && e.changedTouches.length === 1) {
         const dx = e.changedTouches[0].clientX - swipeStart.current.x;
         const dy = e.changedTouches[0].clientY - swipeStart.current.y;
@@ -82,15 +81,16 @@ export function useGridGestures(
       swipeStart.current = null;
     }
 
-    el.addEventListener("touchstart", onStart, { passive: false });
-    el.addEventListener("touchmove", onMove, { passive: false });
-    el.addEventListener("touchend", onEnd, { passive: true });
+    const targetEl = el;
+    targetEl.addEventListener("touchstart", onStart, { passive: false });
+    targetEl.addEventListener("touchmove", onMove, { passive: false });
+    targetEl.addEventListener("touchend", onEnd, { passive: true });
     return () => {
-      el.removeEventListener("touchstart", onStart);
-      el.removeEventListener("touchmove", onMove);
-      el.removeEventListener("touchend", onEnd);
+      targetEl.removeEventListener("touchstart", onStart);
+      targetEl.removeEventListener("touchmove", onMove);
+      targetEl.removeEventListener("touchend", onEnd);
     };
-  }, [ref, onSwipe, zoom, minZoom, maxZoom]);
+  }, [el, onSwipe, zoom, minZoom, maxZoom]);
 
-  return { zoom, setZoom };
+  return { ref: setRef, zoom, setZoom };
 }

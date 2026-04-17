@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   DAYS_SHORT,
   HOURS,
@@ -56,8 +56,7 @@ export function SchedulePage() {
 
   const now = useMemo(() => new Date(), []);
   const days = useMemo(() => weekDates(weekOff), [weekOff]);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const { zoom } = useGridGestures(gridRef);
+  const { ref: gridRef, zoom } = useGridGestures();
   const weekLabel = `${days[0].getMonth() + 1}/${days[0].getDate()} — ${
     days[5].getMonth() + 1
   }/${days[5].getDate()}`;
