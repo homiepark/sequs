@@ -23,6 +23,7 @@ import { MemoBar } from "../schedule/MemoBar";
 import { SessionMemoModal } from "../schedule/SessionMemoModal";
 import { WeekTabs } from "../schedule/WeekTabs";
 import { useGridGestures } from "@/lib/useGridGestures";
+import { useContainerWidth } from "@/lib/useContainerWidth";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -435,20 +436,25 @@ function AllTrainerDayView({
   zoom: number;
   onOpenAction: (ctx: ActionContext) => void;
 }) {
-  const colW = Math.round(110 * zoom);
+  const baseColW = Math.round(110 * zoom);
   const rowMin = Math.round(56 * zoom);
   const { mutate } = useStore();
+  const [wrapRef, containerW] = useContainerWidth<HTMLDivElement>();
+  const stickyW = 56;
+  const fillColW =
+    containerW > 0 ? Math.max(baseColW, Math.floor((containerW - stickyW) / TRAINERS.length)) : baseColW;
+  const colW = fillColW;
   const d = new Date(ds + "T00:00:00");
   const label = ds === TODAY ? "오늘" : `${d.getMonth() + 1}/${d.getDate()}`;
 
   return (
-    <div className="overflow-x-auto overflow-y-auto rounded-xl border border-bd w-full block">
+    <div ref={wrapRef} className="overflow-x-auto overflow-y-auto rounded-xl border border-bd w-full block">
       <table
         className="border-collapse bg-sf"
-        style={{ minWidth: "100%", tableLayout: "fixed" }}
+        style={{ tableLayout: "fixed" }}
       >
         <colgroup>
-          <col style={{ width: 56 }} />
+          <col style={{ width: stickyW }} />
           {TRAINERS.map((t) => (
             <col key={t.id} style={{ width: colW }} />
           ))}
@@ -549,19 +555,25 @@ function WeekAllView({
   zoom: number;
   onOpenAction: (ctx: ActionContext) => void;
 }) {
-  const colMin = Math.round(90 * zoom);
+  const baseColW = Math.round(90 * zoom);
   const rowMin = Math.round(40 * zoom);
+  const [wrapRef, containerW] = useContainerWidth<HTMLDivElement>();
+  const timeW = 56;
+  const trainerW = 64;
+  const stickyW = timeW + trainerW;
+  const colMin =
+    containerW > 0 ? Math.max(baseColW, Math.floor((containerW - stickyW) / days.length)) : baseColW;
   const { mutate } = useStore();
 
   return (
-    <div className="overflow-x-auto overflow-y-auto rounded-xl border border-bd w-full block">
+    <div ref={wrapRef} className="overflow-x-auto overflow-y-auto rounded-xl border border-bd w-full block">
       <table
         className="border-collapse bg-sf"
-        style={{ minWidth: "100%", tableLayout: "fixed" }}
+        style={{ tableLayout: "fixed" }}
       >
         <colgroup>
-          <col style={{ width: 56 }} />
-          <col style={{ width: 64 }} />
+          <col style={{ width: timeW }} />
+          <col style={{ width: trainerW }} />
           {days.map((d) => (
             <col key={fmtDateToISO(d)} style={{ width: colMin }} />
           ))}
