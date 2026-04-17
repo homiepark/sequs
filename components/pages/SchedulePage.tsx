@@ -394,7 +394,7 @@ function Cell({
 }) {
   return (
     <div
-      className={`p-[3px] border-b border-b-bd cursor-pointer overflow-hidden flex flex-col gap-0.5 ${
+      className={`p-[3px] border-b border-b-bd cursor-pointer flex flex-col gap-0.5 ${
         isB ? "blocked-pattern cursor-default" : "hover:bg-white/[0.04]"
       } ${extraCls || ""}`}
       style={{ minHeight: rowMin || 56 }}
@@ -508,7 +508,7 @@ function AllTrainerDayView({
                   <td
                     key={t.id}
                     className={`p-[3px] border-r border-r-bd border-b border-b-bd align-top cursor-pointer hover:bg-white/[0.04] ${cls}`}
-                    style={{ height: rowMin }}
+                    style={{ minHeight: rowMin }}
                     onClick={(e) => {
                       const tgt = e.target as HTMLElement;
                       if (tgt.dataset.stop === "1") return;
@@ -629,7 +629,7 @@ function WeekAllView({
                 )}
                 <td
                   className={`sticky left-[56px] z-[2] bg-sf px-1 py-1 text-[0.72rem] md:text-[0.86rem] font-bold border-r border-r-bd whitespace-nowrap text-center ${rowEndCls}`}
-                  style={{ color: t.hex, height: rowMin }}
+                  style={{ color: t.hex, minHeight: rowMin }}
                 >
                   {t.name}
                 </td>
@@ -651,7 +651,7 @@ function WeekAllView({
                     <td
                       key={ds}
                       className={`p-[2px] border-r border-r-bd align-middle cursor-pointer hover:bg-white/[0.04] ${rowEndCls} ${cls}`}
-                      style={{ height: rowMin }}
+                      style={{ minHeight: rowMin }}
                       onClick={(e) => {
                         const tgt = e.target as HTMLElement;
                         if (tgt.dataset.stop === "1") return;
