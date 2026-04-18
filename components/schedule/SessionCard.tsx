@@ -43,8 +43,15 @@ export function SessionCard({
 
   if (isPreCan || isDayCan) return null;
 
-  const cardStyle = { background: t.hex };
-  const cls = "relative flex flex-col items-center justify-center text-center rounded-[5px] px-1 py-0.5 w-full flex-1 cursor-pointer overflow-hidden group";
+  const isTentative = !!sess.isTentative;
+  const cardStyle = isTentative
+    ? {
+        background: t.hex + "55",
+        border: `2px dashed ${t.hex}`,
+      }
+    : { background: t.hex };
+  const cls =
+    "relative flex flex-col items-center justify-center text-center rounded-[5px] px-1 py-0.5 w-full flex-1 cursor-pointer overflow-hidden group";
   const nameSize = Math.max(0.68, 0.8 * zoom);
   const subSize = Math.max(0.5, 0.58 * zoom);
   const tagSize = Math.max(0.48, 0.56 * zoom);
@@ -54,15 +61,38 @@ export function SessionCard({
   return (
     <div className={cls} style={cardStyle}>
       <div
-        className="font-black text-black whitespace-normal leading-tight w-full flex items-center justify-center gap-1 flex-wrap"
-        style={{ wordBreak: "keep-all", fontSize: `${nameSize}rem` }}
+        className={`font-black whitespace-normal leading-tight w-full flex items-center justify-center gap-1 flex-wrap ${
+          isTentative ? "" : "text-black"
+        }`}
+        style={{
+          wordBreak: "keep-all",
+          fontSize: `${nameSize}rem`,
+          color: isTentative ? t.hex : undefined,
+        }}
       >
+        {isTentative && (
+          <span
+            className="inline-block rounded px-1 font-bold tracking-wider leading-none"
+            style={{
+              fontSize: `${tagSize}rem`,
+              background: t.hex,
+              color: "#000",
+            }}
+          >
+            가
+          </span>
+        )}
         {sess.isFixed && (
           <span
             className={`${
               compactOnMobile ? "hidden md:inline-block" : "inline-block"
-            } rounded px-1 font-bold tracking-wider bg-black/25 text-black leading-none`}
-            style={{ fontSize: `${tagSize}rem` }}
+            } rounded px-1 font-bold tracking-wider bg-black/25 leading-none ${
+              isTentative ? "" : "text-black"
+            }`}
+            style={{
+              fontSize: `${tagSize}rem`,
+              color: isTentative ? t.hex : undefined,
+            }}
           >
             고정
           </span>

@@ -32,6 +32,7 @@ export function SessionModal({
   const [fixedStart, setFixedStart] = useState(date);
   const [fixedEnd, setFixedEnd] = useState("");
   const [noEnd, setNoEnd] = useState(false);
+  const [isTentative, setIsTentative] = useState<boolean>(!!existing?.isTentative);
 
   const preview = useMemo(() => {
     if (!isFixed || !fixedStart) return "";
@@ -114,6 +115,7 @@ export function SessionModal({
           tid,
           mid: memId,
           customName: cname,
+          isTentative: isTentative || undefined,
         });
         delete d.att[`${date}_${existing.id}`];
       });
@@ -127,10 +129,11 @@ export function SessionModal({
           tid,
           mid: memId,
           customName: cname,
+          isTentative: isTentative || undefined,
         });
       });
     } else {
-      mutate("수업 예약", (d) => {
+      mutate(isTentative ? "가예약 등록" : "수업 예약", (d) => {
         d.sessions = d.sessions.filter(
           (s) => !(s.date === date && s.time === actualTime && s.tid === tid)
         );
@@ -141,6 +144,7 @@ export function SessionModal({
           tid,
           mid: memId,
           customName: cname,
+          isTentative: isTentative || undefined,
         });
       });
     }
@@ -193,7 +197,22 @@ export function SessionModal({
         />
       </Field>
 
-      {!existing && (
+      {!isFixed && (
+        <label className="flex items-center gap-2 mb-2 px-1 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isTentative}
+            onChange={(e) => setIsTentative(e.target.checked)}
+            className="w-[15px] h-[15px] cursor-pointer"
+          />
+          <span className="text-[0.82rem]">
+            가예약으로 등록
+            <span className="text-[0.72rem] text-mu ml-1">(취소 시 기록 없이 삭제)</span>
+          </span>
+        </label>
+      )}
+
+      {!existing && !isTentative && (
         <div className="bg-sf2 rounded-[10px] p-3 mb-1">
           <label className="flex items-center gap-2 cursor-pointer">
             <input

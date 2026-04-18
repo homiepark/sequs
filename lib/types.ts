@@ -33,6 +33,7 @@ export interface Session {
   customName?: string | null;
   isFixed?: boolean;
   fixedId?: string;
+  isTentative?: boolean;
 }
 
 export interface FixedSchedule {

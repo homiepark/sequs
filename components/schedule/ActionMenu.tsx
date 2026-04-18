@@ -25,7 +25,9 @@ type Action =
   | "delOnce"
   | "setEnd"
   | "unblock"
-  | "memo";
+  | "memo"
+  | "confirm"
+  | "cancelTent";
 
 export function ActionMenu({
   ctx,
@@ -74,6 +76,18 @@ export function ActionMenu({
     if (a === "setEnd" && sess?.fixedId) {
       onSetEnd(sess.fixedId);
       return;
+    }
+    if (a === "confirm" && sess) {
+      mutate("가예약 확정", (d) => {
+        const s = d.sessions.find((x) => x.id === sess.id);
+        if (s) s.isTentative = false;
+      });
+    }
+    if (a === "cancelTent" && sess) {
+      if (!confirm("가예약을 취소할까요?\n\n기록 없이 바로 삭제됩니다.")) return onClose();
+      mutate("가예약 취소", (d) => {
+        d.sessions = d.sessions.filter((x) => x.id !== sess.id);
+      });
     }
     if (a === "unblock") {
       if (!confirm("시간 차단을 해제할까요?")) return onClose();
@@ -163,19 +177,23 @@ export function ActionMenu({
   }
 
   const isFixed = !!sess?.isFixed;
+  const isTent = !!sess?.isTentative;
   const hasMemo = !!(db.sessionMemos || {})[`${date}_${tid}_${time}`]?.trim();
+  const canBlock = !isB && (!hasS || isCan);
   const allItems: { a: Action; label: string; icon: string; cls?: string; show: boolean }[] = [
     { a: "book", label: "수업 예약", icon: "📅", show: !hasS && !isB },
-    { a: "block", label: "시간 차단", icon: "🚫", cls: "text-[#c9a800]", show: !hasS && !isB },
-    { a: "edit", label: "이번만 수정", icon: "✏️", cls: "text-orange", show: hasS && !isCan },
+    { a: "block", label: "시간 차단", icon: "🚫", cls: "text-[#c9a800]", show: canBlock },
+    { a: "confirm", label: "가예약 → 확정", icon: "✅", cls: "text-green", show: hasS && isTent },
+    { a: "edit", label: isTent ? "가예약 수정" : "이번만 수정", icon: "✏️", cls: "text-orange", show: hasS && !isCan },
     { a: "memo", label: hasMemo ? "메모 수정" : "메모 작성", icon: "📝", show: hasS },
-    { a: "precan", label: "사전 캔슬", icon: "📵", cls: "text-orange", show: hasS && !isCan },
-    { a: "daycan", label: "당일 캔슬", icon: "❌", cls: "text-red", show: hasS && !isCan },
+    { a: "precan", label: "사전 캔슬", icon: "📵", cls: "text-orange", show: hasS && !isCan && !isTent },
+    { a: "daycan", label: "당일 캔슬", icon: "❌", cls: "text-red", show: hasS && !isCan && !isTent },
     { a: "restore", label: "캔슬 취소", icon: "↩️", cls: "text-green", show: hasS && isCan },
     { a: "rebook", label: "이 자리 재예약", icon: "🔄", show: hasS && isCan },
     { a: "delOnce", label: "이번만 삭제", icon: "🗑", cls: "text-red", show: hasS && isFixed },
     { a: "setEnd", label: "종료일 지정 (이후 중단)", icon: "📅", cls: "text-orange", show: hasS && isFixed },
-    { a: "del", label: isFixed ? "고정 전체 삭제" : "수업 삭제", icon: "🗑", cls: "text-red", show: hasS },
+    { a: "cancelTent", label: "가예약 취소", icon: "🗑", cls: "text-red", show: hasS && isTent },
+    { a: "del", label: isFixed ? "고정 전체 삭제" : "수업 삭제", icon: "🗑", cls: "text-red", show: hasS && !isTent },
     { a: "unblock", label: "차단 해제", icon: "✅", cls: "text-[#c9a800]", show: isB },
   ];
   const items = allItems.filter((i) => i.show);
