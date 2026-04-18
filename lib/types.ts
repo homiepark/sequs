@@ -138,6 +138,12 @@ export const TRAINERS: Trainer[] = [
 export const DAYS_SHORT = ["월", "화", "수", "목", "금", "토"] as const;
 export const DAYS_FULL = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일"] as const;
 export const HOURS = Array.from({ length: 14 }, (_, i) => `${String(i + 8).padStart(2, "0")}:00`);
+
+export function formatHourLabel(h: string): string {
+  const hh = parseInt(h.slice(0, 2));
+  const display = hh > 12 ? hh - 12 : hh;
+  return `${display}시`;
+}
 export const AVATAR_COLORS = ["#e8ff47", "#ff6b35", "#3ecfff", "#ff4fad", "#23d160", "#ffd700", "#b07fff", "#f87171"];
 
 export function emptyDB(): DB {

@@ -5,6 +5,7 @@ import {
   HOURS,
   TRAINERS,
   fmtDateToISO,
+  formatHourLabel,
   getSessionsForDate,
   getTrainer,
   isSlotBlocked,
@@ -382,10 +383,10 @@ function SingleTrainerView({
         {HOURS.map((h) => (
           <Fragment key={h}>
             <div
-              className="flex items-start justify-end px-2 pt-2 text-[0.7rem] text-mu border-r border-r-bd border-b border-b-bd bg-sf sticky left-0 z-[1]"
+              className="flex items-center justify-center text-[0.95rem] md:text-[1.15rem] font-bold text-tx border-r border-r-bd border-b border-b-bd bg-sf sticky left-0 z-[1]"
               style={{ minHeight: rowMin }}
             >
-              {h}
+              {formatHourLabel(h)}
             </div>
             {days.map((d, di) => {
               const ds = fmtDateToISO(d);
@@ -544,10 +545,10 @@ function AllTrainerDayView({
           {HOURS.map((h) => (
             <tr key={h}>
               <td
-                className="sticky left-0 z-[2] bg-sf px-2 pt-2 text-[0.7rem] text-mu font-semibold border-r border-r-bd border-b border-b-bd whitespace-nowrap text-right align-top"
+                className="sticky left-0 z-[2] bg-sf px-2 text-[0.95rem] md:text-[1.15rem] text-tx font-bold border-r border-r-bd border-b border-b-bd whitespace-nowrap text-center align-middle"
                 style={{ height: rowMin }}
               >
-                {h}
+                {formatHourLabel(h)}
               </td>
               {TRAINERS.map((t) => {
                 const hHalf = h.replace(":00", ":30");
@@ -680,10 +681,10 @@ function WeekAllView({
           return (
             <Fragment key={h}>
               <div
-                className="sticky left-0 z-[2] bg-sf flex items-center justify-center font-semibold font-bebas tracking-wider text-[0.82rem] md:text-[1rem] text-tx border-r border-r-bd border-b-2 border-b-[#4a4a68]"
+                className="sticky left-0 z-[2] bg-sf flex items-center justify-center font-bold text-[0.95rem] md:text-[1.2rem] text-tx border-r border-r-bd border-b-2 border-b-[#4a4a68]"
                 style={{ gridColumn: 1, gridRow: `${baseRow} / span ${TRAINERS.length}` }}
               >
-                {h}
+                {formatHourLabel(h)}
               </div>
               {TRAINERS.map((t, ti) => {
                 const isLast = ti === TRAINERS.length - 1;
