@@ -77,6 +77,7 @@ export interface DB {
   fixedBlocks?: FixedBlock[];
   att: Record<string, AttStatus>;
   blocks: Record<string, boolean>;
+  blockReasons?: Record<string, string>;
   cancelHistory: CancelHistoryEntry[];
   memos?: Record<string, string>;
   sessionMemos?: Record<string, string>;
@@ -161,6 +162,7 @@ export function emptyDB(): DB {
     fixedBlocks: [],
     att: {},
     blocks: {},
+    blockReasons: {},
     cancelHistory: [],
     memos: {},
     sessionMemos: {},
@@ -182,6 +184,10 @@ export function normalizeDB(raw: unknown): DB {
     fixedBlocks: Array.isArray(r.fixedBlocks) ? (r.fixedBlocks as FixedBlock[]) : [],
     att: r.att && typeof r.att === "object" ? (r.att as Record<string, AttStatus>) : {},
     blocks: r.blocks && typeof r.blocks === "object" ? (r.blocks as Record<string, boolean>) : {},
+    blockReasons:
+      r.blockReasons && typeof r.blockReasons === "object"
+        ? (r.blockReasons as Record<string, string>)
+        : {},
     cancelHistory: Array.isArray(r.cancelHistory) ? (r.cancelHistory as CancelHistoryEntry[]) : [],
     memos: r.memos && typeof r.memos === "object" ? (r.memos as Record<string, string>) : {},
     sessionMemos:

@@ -475,7 +475,9 @@ function Cell({
           tid={tid}
           onUnblock={() => {
             mutate("차단 해제", (d) => {
-              delete d.blocks[`${ds}_${tid}_${time}`];
+              const key = `${ds}_${tid}_${time}`;
+              delete d.blocks[key];
+              if (d.blockReasons) delete d.blockReasons[key];
             });
           }}
         />
@@ -587,7 +589,9 @@ function AllTrainerDayView({
                         tid={t.id}
                         onUnblock={() => {
                           mutate("차단 해제", (d) => {
-                            delete d.blocks[`${ds}_${t.id}_${h}`];
+                            const key = `${ds}_${t.id}_${h}`;
+                            delete d.blocks[key];
+                            if (d.blockReasons) delete d.blockReasons[key];
                           });
                         }}
                       />
@@ -738,7 +742,9 @@ function WeekAllView({
                                 tid={t.id}
                                 onUnblock={() => {
                                   mutate("차단 해제", (d) => {
-                                    delete d.blocks[`${ds}_${t.id}_${h}`];
+                                    const key = `${ds}_${t.id}_${h}`;
+                                    delete d.blocks[key];
+                                    if (d.blockReasons) delete d.blockReasons[key];
                                   });
                                 }}
                               />
@@ -784,16 +790,17 @@ function BlockedCellContent({
       (!b.startDate || ds >= b.startDate) &&
       (!b.endDate || ds <= b.endDate)
   );
-  const label = fb?.label;
+  const fixedLabel = fb?.label;
+  const oneOffReason = (db.blockReasons || {})[`${ds}_${tid}_${time}`];
 
-  if (label) {
+  if (fixedLabel) {
     return (
       <div
-        className="w-full h-full flex items-center justify-center text-[0.68rem] font-bold"
+        className="w-full h-full flex items-center justify-center text-[0.7rem] md:text-[0.82rem] font-bold px-1 text-center leading-tight"
         style={{ color: "#d4a800" }}
-        title={`${label} (고정 차단)`}
+        title={`${fixedLabel} (고정 차단)`}
       >
-        {label}
+        {fixedLabel}
       </div>
     );
   }
@@ -806,10 +813,10 @@ function BlockedCellContent({
         if (!confirm("시간 차단을 해제할까요?")) return;
         onUnblock();
       }}
-      className="w-full h-full flex items-center justify-center bg-transparent border-none text-[0.62rem] font-bold"
+      className="w-full h-full flex items-center justify-center bg-transparent border-none text-[0.7rem] md:text-[0.8rem] font-bold px-1 text-center leading-tight"
       style={{ color: "#d4a800" }}
     >
-      차단 해제
+      {oneOffReason || "차단 해제"}
     </button>
   );
 }

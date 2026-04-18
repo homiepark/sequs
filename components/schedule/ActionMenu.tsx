@@ -79,6 +79,7 @@ export function ActionMenu({
       if (!confirm("시간 차단을 해제할까요?")) return onClose();
       mutate("차단 해제", (d) => {
         delete d.blocks[bKey];
+        if (d.blockReasons) delete d.blockReasons[bKey];
         // Also remove matching fixedBlock entry for this slot if any
         const dow = new Date(date + "T00:00:00").getDay();
         const dowA = dow === 0 ? 7 : dow;
