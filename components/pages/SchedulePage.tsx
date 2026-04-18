@@ -151,7 +151,7 @@ export function SchedulePage() {
                 <button
                   key={s}
                   onClick={() => setDayIdx(i)}
-                  className={`relative px-3 py-1.5 rounded-lg border-[1.5px] text-[0.8rem] font-bold whitespace-nowrap flex-shrink-0 ${
+                  className={`relative px-3 py-1.5 md:px-5 md:py-3 rounded-lg border-[1.5px] text-[0.8rem] md:text-[1.05rem] font-bold whitespace-nowrap flex-shrink-0 ${
                     on
                       ? "bg-acc text-black border-acc"
                       : isT
@@ -160,11 +160,11 @@ export function SchedulePage() {
                   }`}
                 >
                   {DAYS_SHORT[i]}
-                  <span className="block text-[0.6rem] opacity-70">
+                  <span className="block text-[0.6rem] md:text-[0.82rem] opacity-70 mt-0.5">
                     {d.getMonth() + 1}/{d.getDate()}
                   </span>
                   {hasMemo && (
-                    <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-acc" />
+                    <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-acc" />
                   )}
                 </button>
               );
