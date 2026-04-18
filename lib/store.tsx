@@ -112,7 +112,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const next = clone(prev);
       updater(next);
       writeLocal(next);
-      writeDB(next);
+      try {
+        writeDB(next);
+      } catch (err) {
+        console.warn("writeDB failed:", err);
+      }
       return next;
     });
   }, []);

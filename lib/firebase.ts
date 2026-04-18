@@ -50,15 +50,27 @@ export function subscribeDB(cb: (data: DB | null) => void): () => void {
 }
 
 export function writeDB(data: DB): Promise<void> {
-  return set(dbRef(), data).catch((err) => {
-    console.warn("Firebase write error:", err);
-  });
+  try {
+    const cleaned = JSON.parse(JSON.stringify(data)) as DB;
+    return set(dbRef(), cleaned).catch((err) => {
+      console.warn("Firebase write error:", err);
+    });
+  } catch (err) {
+    console.warn("Firebase write sync error:", err);
+    return Promise.resolve();
+  }
 }
 
 export function writeBackupSnapshot(data: DB): Promise<void> {
-  const today = new Date().toISOString().slice(0, 10);
-  const snapRef = ref(getDB(), `ptcenter_backups/${today}`);
-  return set(snapRef, { at: new Date().toISOString(), data }).catch((err) => {
-    console.warn("Firebase backup error:", err);
-  });
+  try {
+    const cleaned = JSON.parse(JSON.stringify(data)) as DB;
+    const today = new Date().toISOString().slice(0, 10);
+    const snapRef = ref(getDB(), `ptcenter_backups/${today}`);
+    return set(snapRef, { at: new Date().toISOString(), data: cleaned }).catch((err) => {
+      console.warn("Firebase backup error:", err);
+    });
+  } catch (err) {
+    console.warn("Firebase backup sync error:", err);
+    return Promise.resolve();
+  }
 }
