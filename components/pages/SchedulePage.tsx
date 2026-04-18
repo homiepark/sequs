@@ -65,13 +65,18 @@ export function SchedulePage() {
 
   const allDay = fmtDateToISO(days[dayIdx] || days[0]);
 
+  function jumpToWeek(newOff: number) {
+    setWeekOff(newOff);
+    setDayIdx(newOff === 0 ? todayDow : 0);
+  }
+
   function chWeek(d: number) {
-    setWeekOff((w) => w + d);
+    jumpToWeek(weekOff + d);
   }
 
   function onYM(y: number, m: number) {
     const diff = Math.round((new Date(y, m - 1, 1).getTime() - Date.now()) / 86400000 / 7);
-    setWeekOff(diff);
+    jumpToWeek(diff);
   }
 
   return (
@@ -102,14 +107,14 @@ export function SchedulePage() {
         <button onClick={() => chWeek(-1)} className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg text-[0.8rem] md:text-[0.95rem] font-semibold hover:border-acc hover:text-acc">←</button>
         <span className="font-bold text-[0.84rem] md:text-[1rem] min-w-[80px] md:min-w-[110px] text-center">{weekLabel}</span>
         <button onClick={() => chWeek(1)} className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg text-[0.8rem] md:text-[0.95rem] font-semibold hover:border-acc hover:text-acc">→</button>
-        <button onClick={() => setWeekOff(0)} className="bg-sf2 border border-acc text-acc px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[0.8rem] md:text-[0.95rem] font-semibold">오늘</button>
+        <button onClick={() => jumpToWeek(0)} className="bg-sf2 border border-acc text-acc px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-[0.8rem] md:text-[0.95rem] font-semibold">오늘</button>
       </div>
 
       <WeekTabs
         weekOff={weekOff}
         year={days[0].getFullYear()}
         month={days[0].getMonth() + 1}
-        onPick={(off) => setWeekOff(off)}
+        onPick={(off) => jumpToWeek(off)}
       />
 
       <div className="flex gap-1.5 mb-3 flex-wrap">
