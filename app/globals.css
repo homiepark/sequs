@@ -101,17 +101,19 @@ select {
   0%,
   100% {
     box-shadow:
-      0 0 6px rgba(232, 255, 71, 0.25),
-      0 0 14px rgba(232, 255, 71, 0.12),
-      inset 0 0 8px rgba(232, 255, 71, 0.04);
-    border-color: rgba(232, 255, 71, 0.55);
+      0 0 8px rgba(232, 255, 71, 0.35),
+      0 0 18px rgba(232, 255, 71, 0.18),
+      inset 0 0 10px rgba(232, 255, 71, 0.06);
+    border-color: rgba(232, 255, 71, 0.6);
+    background-color: rgba(232, 255, 71, 0.05);
   }
   50% {
     box-shadow:
-      0 0 18px rgba(232, 255, 71, 0.7),
-      0 0 36px rgba(232, 255, 71, 0.3),
-      inset 0 0 14px rgba(232, 255, 71, 0.12);
+      0 0 24px rgba(232, 255, 71, 0.9),
+      0 0 48px rgba(232, 255, 71, 0.45),
+      inset 0 0 18px rgba(232, 255, 71, 0.18);
     border-color: rgba(232, 255, 71, 1);
+    background-color: rgba(232, 255, 71, 0.14);
   }
 }
 
@@ -119,29 +121,24 @@ select {
   0%,
   100% {
     text-shadow:
-      0 0 3px rgba(232, 255, 71, 0.4),
-      0 0 6px rgba(232, 255, 71, 0.2);
+      0 0 4px rgba(232, 255, 71, 0.5),
+      0 0 8px rgba(232, 255, 71, 0.25);
   }
   50% {
     text-shadow:
-      0 0 6px rgba(232, 255, 71, 0.85),
-      0 0 14px rgba(232, 255, 71, 0.5),
-      0 0 22px rgba(232, 255, 71, 0.25);
+      0 0 8px rgba(232, 255, 71, 0.95),
+      0 0 18px rgba(232, 255, 71, 0.55),
+      0 0 28px rgba(232, 255, 71, 0.3);
   }
 }
 
 .memo-neon {
   animation: memoNeonGlow 2s ease-in-out infinite;
+  will-change: box-shadow, border-color, background-color;
 }
 
 .memo-neon-text {
   animation: memoNeonText 2s ease-in-out infinite;
   color: #f4ff80;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .memo-neon,
-  .memo-neon-text {
-    animation: none;
-  }
+  will-change: text-shadow;
 }
