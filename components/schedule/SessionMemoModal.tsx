@@ -24,8 +24,11 @@ export function SessionMemoModal({
   onClose: () => void;
 }) {
   const { db, mutate } = useStore();
-  const key = sessionSlotKey(date, tid, time);
-  const existing = (db.sessionMemos || {})[key] || "";
+  const keyTime = sess?.time || time;
+  const key = sessionSlotKey(date, tid, keyTime);
+  const legacyKey = sessionSlotKey(date, tid, time);
+  const existing =
+    (db.sessionMemos || {})[key] || (db.sessionMemos || {})[legacyKey] || "";
   const [text, setText] = useState(existing);
 
   const t = getTrainer(tid);
@@ -37,6 +40,8 @@ export function SessionMemoModal({
     const trimmed = text.trim();
     mutate(trimmed ? "세션 메모 저장" : "세션 메모 삭제", (d) => {
       d.sessionMemos = d.sessionMemos || {};
+      // clean legacy mis-keyed entry (hour-only key for :30 sessions)
+      if (legacyKey !== key) delete d.sessionMemos[legacyKey];
       if (!trimmed) delete d.sessionMemos[key];
       else d.sessionMemos[key] = trimmed;
     });
@@ -45,7 +50,10 @@ export function SessionMemoModal({
 
   function remove() {
     mutate("세션 메모 삭제", (d) => {
-      if (d.sessionMemos) delete d.sessionMemos[key];
+      if (d.sessionMemos) {
+        delete d.sessionMemos[key];
+        if (legacyKey !== key) delete d.sessionMemos[legacyKey];
+      }
     });
     onClose();
   }

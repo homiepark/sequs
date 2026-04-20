@@ -178,7 +178,10 @@ export function ActionMenu({
 
   const isFixed = !!sess?.isFixed;
   const isTent = !!sess?.isTentative;
-  const hasMemo = !!(db.sessionMemos || {})[`${date}_${tid}_${time}`]?.trim();
+  const memoKeyTime = sess?.time || time;
+  const hasMemo =
+    !!(db.sessionMemos || {})[`${date}_${tid}_${memoKeyTime}`]?.trim() ||
+    !!(db.sessionMemos || {})[`${date}_${tid}_${time}`]?.trim();
   const canBlock = !isB && (!hasS || isCan);
   const allItems: { a: Action; label: string; icon: string; cls?: string; show: boolean }[] = [
     { a: "book", label: "수업 예약", icon: "📅", show: !hasS && !isB },
