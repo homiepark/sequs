@@ -35,17 +35,21 @@ export function MemoBar({ ds, compact }: { ds: string; compact?: boolean }) {
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className={`w-full text-left flex items-start gap-2 px-3 py-2 rounded-lg mb-3 border text-[0.82rem] ${
+        className={`w-full text-left flex items-start gap-2 px-3 py-2.5 rounded-lg mb-3 border-[1.5px] text-[0.86rem] md:text-[0.95rem] ${
           memo
-            ? "bg-[rgba(232,255,71,0.06)] border-acc/40 text-tx"
+            ? "memo-neon bg-[rgba(232,255,71,0.08)] text-tx"
             : "bg-sf2 border-dashed border-bd text-mu hover:text-acc hover:border-acc"
         }`}
       >
-        <span className="text-[1rem] leading-none mt-0.5">📝</span>
-        <span className="flex-1 leading-snug whitespace-pre-wrap">
+        <span className="text-[1rem] md:text-[1.1rem] leading-none mt-0.5">📝</span>
+        <span
+          className={`flex-1 leading-snug whitespace-pre-wrap font-bold ${
+            memo ? "memo-neon-text" : ""
+          }`}
+        >
           {memo || "이 날의 메모 추가..."}
         </span>
-        {memo && <span className="text-[0.7rem] opacity-60">수정</span>}
+        {memo && <span className="text-[0.7rem] opacity-60 font-medium">수정</span>}
       </button>
       {editing && <MemoModal ds={ds} onClose={() => setEditing(false)} />}
     </>

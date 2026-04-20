@@ -95,3 +95,53 @@ select {
     rgba(200, 155, 0, 0.13) 10px
   );
 }
+
+/* Neon pulsing memo banner */
+@keyframes memoNeonGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 6px rgba(232, 255, 71, 0.25),
+      0 0 14px rgba(232, 255, 71, 0.12),
+      inset 0 0 8px rgba(232, 255, 71, 0.04);
+    border-color: rgba(232, 255, 71, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 0 18px rgba(232, 255, 71, 0.7),
+      0 0 36px rgba(232, 255, 71, 0.3),
+      inset 0 0 14px rgba(232, 255, 71, 0.12);
+    border-color: rgba(232, 255, 71, 1);
+  }
+}
+
+@keyframes memoNeonText {
+  0%,
+  100% {
+    text-shadow:
+      0 0 3px rgba(232, 255, 71, 0.4),
+      0 0 6px rgba(232, 255, 71, 0.2);
+  }
+  50% {
+    text-shadow:
+      0 0 6px rgba(232, 255, 71, 0.85),
+      0 0 14px rgba(232, 255, 71, 0.5),
+      0 0 22px rgba(232, 255, 71, 0.25);
+  }
+}
+
+.memo-neon {
+  animation: memoNeonGlow 2s ease-in-out infinite;
+}
+
+.memo-neon-text {
+  animation: memoNeonText 2s ease-in-out infinite;
+  color: #f4ff80;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memo-neon,
+  .memo-neon-text {
+    animation: none;
+  }
+}
