@@ -15,6 +15,7 @@ import {
 import { TrainerTabs } from "../ui/TrainerTabs";
 import { Modal } from "../ui/Modal";
 import { BulkAddModal } from "../members/BulkAddModal";
+import { MemberScheduleModal } from "../members/MemberScheduleModal";
 
 function uniqueDatesForMember(db: DB, mid: string): string[] {
   const dates = new Set<string>();
@@ -46,6 +47,7 @@ export function MembersPage() {
   const [editing, setEditing] = useState<Member | null>(null);
   const [adding, setAdding] = useState(false);
   const [bulkAdding, setBulkAdding] = useState(false);
+  const [scheduleFor, setScheduleFor] = useState<Member | null>(null);
 
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -188,6 +190,12 @@ export function MembersPage() {
                 )}
                 <div className="flex gap-1.5 mt-2.5">
                   <button
+                    onClick={() => setScheduleFor(m)}
+                    className="flex-1 py-2 rounded-lg bg-acc/10 text-acc border border-acc/40 font-bold text-[0.78rem]"
+                  >
+                    📅 예약 보기
+                  </button>
+                  <button
                     onClick={() => setEditing(m)}
                     className="flex-1 py-2 rounded-lg bg-sf2 text-tx border border-bd font-bold text-[0.78rem]"
                   >
@@ -224,6 +232,13 @@ export function MembersPage() {
       )}
 
       {bulkAdding && <BulkAddModal onClose={() => setBulkAdding(false)} />}
+
+      {scheduleFor && (
+        <MemberScheduleModal
+          member={scheduleFor}
+          onClose={() => setScheduleFor(null)}
+        />
+      )}
     </div>
   );
 }

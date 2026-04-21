@@ -7,6 +7,7 @@ import { MembersPage } from "./pages/MembersPage";
 import { StatsPage } from "./pages/StatsPage";
 import { Toast } from "./ui/Toast";
 import { PWARegister } from "./PWARegister";
+import { HighlightProvider } from "@/lib/highlight";
 import { useStore } from "@/lib/store";
 
 export type Page = "schedule" | "fixed" | "members" | "stats";
@@ -50,7 +51,7 @@ export function App() {
   }
 
   return (
-    <>
+    <HighlightProvider>
       <Header page={page} onChange={setPage} />
       <main className="px-3.5 pt-3.5 pb-[60px] max-w-[1300px] mx-auto">
         {page === "schedule" && <SchedulePage />}
@@ -60,6 +61,6 @@ export function App() {
       </main>
       {toast && <Toast text={toast} />}
       <PWARegister />
-    </>
+    </HighlightProvider>
   );
 }

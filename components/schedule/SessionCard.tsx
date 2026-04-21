@@ -1,5 +1,6 @@
 "use client";
 import { useStore } from "@/lib/store";
+import { useHighlight } from "@/lib/highlight";
 import {
   getMember,
   getTrainer,
@@ -22,6 +23,7 @@ export function SessionCard({
   compactOnMobile?: boolean;
 }) {
   const { db, mutate } = useStore();
+  const { highlightMid } = useHighlight();
   const t = getTrainer(tid)!;
   const mem = getMember(db, sess.mid);
   const ak = `${ds}_${sess.id}`;
@@ -50,8 +52,10 @@ export function SessionCard({
         border: `2px dashed ${t.hex}`,
       }
     : { background: t.hex };
+  const isHighlighted = !!highlightMid && sess.mid === highlightMid;
   const cls =
-    "relative flex flex-col items-center justify-center text-center rounded-[5px] px-1 py-0.5 w-full flex-1 cursor-pointer overflow-hidden group";
+    "relative flex flex-col items-center justify-center text-center rounded-[5px] px-1 py-0.5 w-full flex-1 cursor-pointer overflow-hidden group" +
+    (isHighlighted ? " member-highlight" : "");
   const nameSize = Math.max(0.68, 0.8 * zoom);
   const subSize = Math.max(0.5, 0.58 * zoom);
   const tagSize = Math.max(0.48, 0.56 * zoom);

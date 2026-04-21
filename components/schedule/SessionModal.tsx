@@ -1,9 +1,16 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { TRAINERS, type Session, type TrainerId } from "@/lib/types";
+import {
+  TRAINERS,
+  fmtDateToISO,
+  getSessionsForDate,
+  type Session,
+  type TrainerId,
+} from "@/lib/types";
 import { Modal } from "../ui/Modal";
 import { MemberAutocomplete, type MemberSelection } from "./MemberAutocomplete";
+import { FixedConflictModal, type Conflict } from "./FixedConflictModal";
 
 export function SessionModal({
   date,
@@ -33,6 +40,7 @@ export function SessionModal({
   const [fixedEnd, setFixedEnd] = useState("");
   const [noEnd, setNoEnd] = useState(false);
   const [isTentative, setIsTentative] = useState<boolean>(!!existing?.isTentative);
+  const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
 
   const preview = useMemo(() => {
     if (!isFixed || !fixedStart) return "";
@@ -67,33 +75,78 @@ export function SessionModal({
     return newId;
   }
 
+  const baseTime = time.replace(":30", ":00");
+  const actualTime = isHalf ? baseTime.replace(":00", ":30") : baseTime;
+  const cname = sel.customName;
+  const memId = sel.mid;
+
+  function proceedFixedSave(overwriteExisting: boolean) {
+    const sd = new Date(fixedStart + "T00:00:00");
+    const dow = sd.getDay() === 0 ? 7 : sd.getDay();
+    const fid = "f" + Date.now();
+    mutate("고정수업 등록", (d) => {
+      if (overwriteExisting) {
+        const endISO = noEnd ? null : fixedEnd;
+        // Remove real session overrides at this tid+actualTime within range
+        d.sessions = d.sessions.filter((s) => {
+          if (s.tid !== tid) return true;
+          if (s.time !== actualTime) return true;
+          if (s.date < fixedStart) return true;
+          if (endISO && s.date > endISO) return true;
+          const sdow = new Date(s.date + "T00:00:00").getDay();
+          const sdowA = sdow === 0 ? 7 : sdow;
+          if (sdowA !== dow) return true;
+          return false;
+        });
+        // Also end existing fixedSchedules covering this weekday+time
+        d.fixedSchedules = d.fixedSchedules.map((f) => {
+          if (f.tid !== tid) return f;
+          if (f.time !== actualTime) return f;
+          if (f.dayOfWeek !== dow) return f;
+          // Mark end the day before new fixed starts so historical stays
+          const newEnd = prevDay(fixedStart);
+          if (!f.startDate || newEnd >= f.startDate) {
+            if (!f.endDate || newEnd < f.endDate) {
+              return { ...f, endDate: newEnd };
+            }
+          }
+          return f;
+        });
+      }
+      d.fixedSchedules.push({
+        id: fid,
+        tid,
+        mid: memId,
+        customName: cname,
+        dayOfWeek: dow,
+        time: actualTime,
+        startDate: fixedStart,
+        endDate: noEnd ? null : fixedEnd,
+      });
+    });
+    onClose();
+  }
+
   function save() {
     if (!sel.mid && !sel.customName) {
       return alert("회원을 선택하거나 이름을 입력해주세요");
     }
-    const baseTime = time.replace(":30", ":00");
-    const actualTime = isHalf ? baseTime.replace(":00", ":30") : baseTime;
-    const cname = sel.customName;
-    const memId = sel.mid;
 
     if (isFixed && !existing) {
       if (!noEnd && !fixedEnd) return alert("종료일을 선택해주세요");
-      const sd = new Date(fixedStart + "T00:00:00");
-      const dow = sd.getDay() === 0 ? 7 : sd.getDay();
-      const fid = "f" + Date.now();
-      mutate("고정수업 등록", (d) => {
-        d.fixedSchedules.push({
-          id: fid,
-          tid,
-          mid: memId,
-          customName: cname,
-          dayOfWeek: dow,
-          time: actualTime,
-          startDate: fixedStart,
-          endDate: noEnd ? null : fixedEnd,
-        });
+      // Conflict detection
+      const found = findConflicts({
+        db,
+        tid,
+        time: actualTime,
+        startISO: fixedStart,
+        endISO: noEnd ? null : fixedEnd,
       });
-      onClose();
+      if (found.length > 0) {
+        setConflicts(found);
+        return;
+      }
+      proceedFixedSave(false);
       return;
     }
 
@@ -284,6 +337,23 @@ export function SessionModal({
           저장
         </button>
       </div>
+
+      {conflicts && (
+        <FixedConflictModal
+          db={db}
+          tid={tid}
+          conflicts={conflicts}
+          onCancel={() => setConflicts(null)}
+          onKeep={() => {
+            setConflicts(null);
+            proceedFixedSave(false);
+          }}
+          onOverwrite={() => {
+            setConflicts(null);
+            proceedFixedSave(true);
+          }}
+        />
+      )}
     </Modal>
   );
 }
@@ -295,4 +365,43 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   );
+}
+
+function prevDay(ds: string): string {
+  const d = new Date(ds + "T00:00:00");
+  d.setDate(d.getDate() - 1);
+  return fmtDateToISO(d);
+}
+
+function findConflicts({
+  db,
+  tid,
+  time,
+  startISO,
+  endISO,
+}: {
+  db: import("@/lib/types").DB;
+  tid: TrainerId;
+  time: string;
+  startISO: string;
+  endISO: string | null;
+}): Conflict[] {
+  const out: Conflict[] = [];
+  const start = new Date(startISO + "T00:00:00");
+  const dow = start.getDay() === 0 ? 7 : start.getDay();
+  const end = endISO
+    ? new Date(endISO + "T00:00:00")
+    : new Date(start.getFullYear() + 1, start.getMonth(), start.getDate());
+  for (let x = new Date(start); x <= end; x.setDate(x.getDate() + 7)) {
+    const ds = fmtDateToISO(x);
+    const daySessions = getSessionsForDate(db, ds);
+    for (const s of daySessions) {
+      if (s.tid !== tid) continue;
+      if (s.time !== time) continue;
+      const xdow = x.getDay() === 0 ? 7 : x.getDay();
+      if (xdow !== dow) continue;
+      out.push({ date: ds, sess: s });
+    }
+  }
+  return out;
 }
