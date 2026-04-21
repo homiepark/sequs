@@ -9,6 +9,29 @@ import {
   type TrainerId,
 } from "@/lib/types";
 
+const CHOSUNG = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+
+function toChosung(str: string): string {
+  let out = "";
+  for (const ch of str) {
+    const code = ch.charCodeAt(0);
+    if (code >= 0xac00 && code <= 0xd7a3) {
+      out += CHOSUNG[Math.floor((code - 0xac00) / 588)];
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+function matchesName(name: string, q: string): boolean {
+  if (!q) return true;
+  const lowerName = name.toLowerCase();
+  const lowerQ = q.toLowerCase();
+  if (lowerName.includes(lowerQ)) return true;
+  return toChosung(name).includes(q);
+}
+
 export interface MemberSelection {
   mid: string | null;
   customName: string | null;
@@ -49,7 +72,7 @@ export function MemberAutocomplete({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
 
   const matches = useMemo(() => {
     const byName = (a: Member, b: Member) => a.name.localeCompare(b.name, "ko");
@@ -57,17 +80,17 @@ export function MemberAutocomplete({
       return db.members.filter((m) => memberHasTrainer(m, tid)).slice().sort(byName);
     }
     const primary = db.members
-      .filter((m) => memberHasTrainer(m, tid) && m.name.toLowerCase().includes(q))
+      .filter((m) => memberHasTrainer(m, tid) && matchesName(m.name, q))
       .slice()
       .sort(byName);
     const secondary = db.members
-      .filter((m) => !memberHasTrainer(m, tid) && m.name.toLowerCase().includes(q))
+      .filter((m) => !memberHasTrainer(m, tid) && matchesName(m.name, q))
       .slice()
       .sort(byName);
     return [...primary, ...secondary];
   }, [db.members, tid, q]);
 
-  const exactMatch = q && db.members.some((m) => m.name.toLowerCase() === q);
+  const exactMatch = q && db.members.some((m) => m.name.toLowerCase() === q.toLowerCase());
 
   function selectMember(m: Member) {
     setSelectedMid(m.id);
@@ -102,6 +125,7 @@ export function MemberAutocomplete({
   return (
     <div className="relative" ref={wrapRef}>
       <input
+        autoFocus
         type="text"
         value={query}
         onChange={(e) => {
@@ -112,7 +136,7 @@ export function MemberAutocomplete({
           onChange({ mid: null, customName: null });
         }}
         onFocus={() => setFocused(true)}
-        placeholder="이름 검색..."
+        placeholder="이름 검색 (초성 ㅎㄱㄷ도 가능)"
         className="w-full bg-sf2 border border-bd text-tx px-2.5 py-2 rounded-lg text-[0.84rem] outline-none focus:border-acc"
       />
       {selectedMember && !focused && (
