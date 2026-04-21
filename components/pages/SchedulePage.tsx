@@ -24,6 +24,7 @@ import { MemoBar } from "../schedule/MemoBar";
 import { SessionMemoModal } from "../schedule/SessionMemoModal";
 import { FixedEndDateModal } from "../schedule/FixedEndDateModal";
 import { WeekTabs } from "../schedule/WeekTabs";
+import { MemberSearchModal } from "../members/MemberSearchModal";
 import { useGridGestures } from "@/lib/useGridGestures";
 import { useContainerWidth } from "@/lib/useContainerWidth";
 
@@ -56,6 +57,7 @@ export function SchedulePage() {
     sess: Session | null;
   } | null>(null);
   const [endDateModal, setEndDateModal] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const now = useMemo(() => new Date(), []);
   const days = useMemo(() => weekDates(weekOff), [weekOff]);
@@ -118,10 +120,17 @@ export function SchedulePage() {
         onPick={(off) => jumpToWeek(off)}
       />
 
-      <div className="flex gap-1.5 mb-3 flex-wrap">
+      <div className="flex gap-1.5 mb-3 flex-wrap items-center">
         <ModeBtn active={viewMode === "single"} onClick={() => setViewMode("single")}>📋 개별</ModeBtn>
         <ModeBtn active={viewMode === "dayAll"} onClick={() => setViewMode("dayAll")}>📅 하루 전체</ModeBtn>
         <ModeBtn active={viewMode === "weekAll"} onClick={() => setViewMode("weekAll")}>📊 주간 전체</ModeBtn>
+        <button
+          onClick={() => setSearchOpen(true)}
+          title="회원 검색 — 스케줄에서 해당 회원 예약을 전부 표시"
+          className="px-3 py-1.5 md:px-4 md:py-2.5 rounded-lg text-[0.78rem] md:text-[0.95rem] font-bold border-[1.5px] whitespace-nowrap bg-sf2 text-tx border-bd hover:border-acc hover:text-acc"
+        >
+          🔍
+        </button>
       </div>
 
       {viewMode === "single" && (
@@ -260,6 +269,8 @@ export function SchedulePage() {
           onClose={() => setMemoModal(null)}
         />
       )}
+
+      {searchOpen && <MemberSearchModal onClose={() => setSearchOpen(false)} />}
 
       {endDateModal && (() => {
         const f = db.fixedSchedules.find((x) => x.id === endDateModal);

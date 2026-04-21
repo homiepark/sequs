@@ -1,9 +1,7 @@
 "use client";
-import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { useHighlight } from "@/lib/highlight";
 import { InstallButton } from "./InstallButton";
-import { MemberSearchModal } from "./members/MemberSearchModal";
 import type { Page } from "./App";
 
 const PAGES: { id: Page; label: string }[] = [
@@ -16,7 +14,6 @@ const PAGES: { id: Page; label: string }[] = [
 export function Header({ page, onChange }: { page: Page; onChange: (p: Page) => void }) {
   const { db, sync, canUndo, undo } = useStore();
   const { highlightMid, setHighlightMid } = useHighlight();
-  const [searchOpen, setSearchOpen] = useState(false);
   const syncLabel =
     sync === "syncing" ? "☁️ 동기화 중" : sync === "error" ? "⚠️ 오류" : "💾 로컬";
   const syncColor = sync === "syncing" ? "text-green" : "text-mu";
@@ -46,13 +43,6 @@ export function Header({ page, onChange }: { page: Page; onChange: (p: Page) => 
             </button>
           ))}
         </nav>
-        <button
-          onClick={() => setSearchOpen(true)}
-          title="회원 검색"
-          className="bg-sf2 border border-bd text-tx px-2.5 py-1.5 rounded-[7px] text-[0.82rem] font-bold flex-shrink-0 hover:border-acc hover:text-acc"
-        >
-          🔍
-        </button>
         {canUndo && (
           <button
             onClick={undo}
@@ -77,7 +67,6 @@ export function Header({ page, onChange }: { page: Page; onChange: (p: Page) => 
           </button>
         </div>
       )}
-      {searchOpen && <MemberSearchModal onClose={() => setSearchOpen(false)} />}
     </>
   );
 }
