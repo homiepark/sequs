@@ -4,12 +4,14 @@ import { useStore } from "@/lib/store";
 import {
   AVATAR_COLORS,
   TRAINERS,
+  fmtKo,
   getSessionsForDate,
   getTrainer,
   memberHasTrainer,
   memberTrainers,
   type DB,
   type Member,
+  type MemberMemoEntry,
   type TrainerId,
 } from "@/lib/types";
 import { TrainerTabs } from "../ui/TrainerTabs";
@@ -188,6 +190,22 @@ export function MembersPage() {
                     💬 {m.memo}
                   </div>
                 )}
+                {(() => {
+                  const log = (m.memoLog || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+                  if (!log.length) return null;
+                  const latest = log[0];
+                  return (
+                    <div className="mt-2 px-2 py-1.5 bg-sf2 border border-bd rounded-md text-[0.72rem] text-tx">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-bold text-acc text-[0.68rem]">📋 {fmtKo(latest.date)}</span>
+                        {log.length > 1 && (
+                          <span className="text-[0.64rem] text-mu">+{log.length - 1}건 더</span>
+                        )}
+                      </div>
+                      <div className="whitespace-pre-wrap leading-relaxed line-clamp-2">{latest.text}</div>
+                    </div>
+                  );
+                })()}
                 <div className="flex gap-1.5 mt-2.5">
                   <button
                     onClick={() => setScheduleFor(m)}
@@ -255,6 +273,34 @@ function MemberModal({
   const [phone, setPhone] = useState(member?.phone || "");
   const [tids, setTids] = useState<TrainerId[]>(member ? memberTrainers(member) : []);
   const [memo, setMemo] = useState(member?.memo || "");
+  const [memoLog, setMemoLog] = useState<MemberMemoEntry[]>(member?.memoLog || []);
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const [logDate, setLogDate] = useState(todayISO);
+  const [logText, setLogText] = useState("");
+
+  function addLogEntry() {
+    const text = logText.trim();
+    if (!text) return;
+    if (!logDate) return;
+    const entry: MemberMemoEntry = {
+      id: "ml" + Date.now(),
+      date: logDate,
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    setMemoLog((prev) => [entry, ...prev]);
+    setLogText("");
+    setLogDate(todayISO);
+  }
+
+  function removeLogEntry(id: string) {
+    setMemoLog((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  const sortedLog = [...memoLog].sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return a.createdAt < b.createdAt ? 1 : -1;
+  });
 
   const duplicates = useMemo(() => {
     const n = name.trim();
@@ -280,6 +326,7 @@ function MemberModal({
           m.tid = tids[0];
           m.tids = tids;
           m.memo = memo.trim();
+          m.memoLog = memoLog;
         }
       });
     } else {
@@ -291,6 +338,7 @@ function MemberModal({
           tid: tids[0],
           tids,
           memo: memo.trim(),
+          memoLog,
         });
       });
     }
@@ -378,6 +426,64 @@ function MemberModal({
           placeholder="예: 무릎 수술 이력, 스쿼트 주의"
           className="w-full bg-sf2 border border-bd text-tx px-2.5 py-2 rounded-lg text-[0.84rem] outline-none focus:border-acc resize-none"
         />
+      </div>
+      <div className="mb-3">
+        <label className="block text-[0.71rem] text-mu mb-1 font-medium">
+          일자별 이슈 기록 <span className="text-[0.68rem] opacity-70">(그날 중요한 이슈 · 컨디션 · 특이사항)</span>
+        </label>
+        <div className="flex gap-1.5 mb-2">
+          <input
+            type="date"
+            value={logDate}
+            onChange={(e) => setLogDate(e.target.value)}
+            className="bg-sf2 border border-bd text-tx px-2 py-2 rounded-lg text-[0.8rem] outline-none focus:border-acc"
+          />
+          <input
+            value={logText}
+            onChange={(e) => setLogText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                addLogEntry();
+              }
+            }}
+            placeholder="예: 오른쪽 어깨 통증 호소"
+            className="flex-1 min-w-0 bg-sf2 border border-bd text-tx px-2.5 py-2 rounded-lg text-[0.84rem] outline-none focus:border-acc"
+          />
+          <button
+            type="button"
+            onClick={addLogEntry}
+            disabled={!logText.trim() || !logDate}
+            className="px-3 py-2 rounded-lg bg-acc text-black font-bold text-[0.78rem] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            추가
+          </button>
+        </div>
+        {sortedLog.length > 0 && (
+          <div className="flex flex-col gap-1.5 max-h-[240px] overflow-y-auto pr-0.5">
+            {sortedLog.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex items-start gap-2 px-2 py-1.5 bg-sf2 border border-bd rounded-md"
+              >
+                <div className="flex flex-col items-start min-w-[72px]">
+                  <span className="text-[0.68rem] font-bold text-acc">{fmtKo(entry.date)}</span>
+                </div>
+                <div className="flex-1 text-[0.78rem] text-tx whitespace-pre-wrap leading-relaxed break-words">
+                  {entry.text}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeLogEntry(entry.id)}
+                  className="text-mu hover:text-red text-[0.75rem] px-1.5 py-0.5 flex-shrink-0"
+                  aria-label="삭제"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <div className="flex gap-2 mt-3.5">
         <button onClick={onClose} className="flex-1 py-2.5 rounded-lg bg-sf2 text-tx font-bold text-[0.83rem] border-none">

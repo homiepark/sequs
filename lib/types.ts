@@ -6,6 +6,13 @@ export interface Trainer {
   hex: string;
 }
 
+export interface MemberMemoEntry {
+  id: string;
+  date: string; // YYYY-MM-DD (작성 대상 날짜)
+  text: string;
+  createdAt: string; // ISO timestamp
+}
+
 export interface Member {
   id: string;
   name: string;
@@ -13,6 +20,7 @@ export interface Member {
   tid: TrainerId;
   tids?: TrainerId[];
   memo?: string;
+  memoLog?: MemberMemoEntry[];
 }
 
 export function memberTrainers(m: Member): TrainerId[] {
@@ -177,6 +185,11 @@ export function normalizeDB(raw: unknown): DB {
   const members = rawMembers.map((m) => ({
     ...m,
     tids: m.tids && Array.isArray(m.tids) && m.tids.length ? m.tids : m.tid ? [m.tid] : [],
+    memoLog: Array.isArray(m.memoLog)
+      ? (m.memoLog as MemberMemoEntry[]).filter(
+          (e) => e && typeof e.id === "string" && typeof e.date === "string" && typeof e.text === "string"
+        )
+      : [],
   }));
   return {
     members,
