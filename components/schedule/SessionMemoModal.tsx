@@ -36,7 +36,8 @@ export function SessionMemoModal({
   const t = getTrainer(tid);
   const mem = sess?.mid ? getMember(db, sess.mid) : null;
   const memberName = mem?.name || sess?.customName || null;
-  const memberMemo = mem?.memo?.trim();
+  const initialProfileMemo = mem?.memo || "";
+  const [profileMemo, setProfileMemo] = useState(initialProfileMemo);
 
   // 회원 이슈 (memoLog) 상태
   const [issueDate, setIssueDate] = useState(date);
@@ -89,12 +90,31 @@ export function SessionMemoModal({
 
   function save() {
     const trimmed = text.trim();
-    mutate(trimmed ? "수업 메모 저장" : "수업 메모 삭제", (d) => {
-      d.sessionMemos = d.sessionMemos || {};
-      if (legacyKey !== key) delete d.sessionMemos[legacyKey];
-      if (!trimmed) delete d.sessionMemos[key];
-      else d.sessionMemos[key] = trimmed;
-    });
+    const trimmedProfile = profileMemo.trim();
+    const profileChanged = mem && trimmedProfile !== (mem.memo || "").trim();
+    const sessionChanged = trimmed !== existing.trim();
+
+    if (sessionChanged || profileChanged) {
+      const label = sessionChanged && profileChanged
+        ? "수업 메모 · 특이사항 저장"
+        : profileChanged
+        ? "회원 특이사항 저장"
+        : trimmed
+        ? "수업 메모 저장"
+        : "수업 메모 삭제";
+      mutate(label, (d) => {
+        if (sessionChanged) {
+          d.sessionMemos = d.sessionMemos || {};
+          if (legacyKey !== key) delete d.sessionMemos[legacyKey];
+          if (!trimmed) delete d.sessionMemos[key];
+          else d.sessionMemos[key] = trimmed;
+        }
+        if (profileChanged && mem) {
+          const target = d.members.find((x) => x.id === mem.id);
+          if (target) target.memo = trimmedProfile;
+        }
+      });
+    }
     onClose();
   }
 
@@ -122,15 +142,18 @@ export function SessionMemoModal({
         </div>
       </div>
 
-      {memberMemo && (
+      {mem && (
         <div className="mb-3">
-          <div className="text-[0.7rem] text-mu mb-1 font-medium flex items-center gap-1">
-            💬 회원 특이사항
-            <span className="text-[0.66rem] opacity-60">(회원 탭에서 편집)</span>
-          </div>
-          <div className="px-3 py-2 bg-[rgba(232,255,71,0.06)] border border-acc/30 rounded-lg text-[0.82rem] leading-relaxed whitespace-pre-wrap">
-            {memberMemo}
-          </div>
+          <label className="block text-[0.72rem] text-mu mb-1 font-semibold">
+            💬 회원 특이사항 <span className="text-[0.66rem] opacity-70">(부상 · 선호 · 주의사항 등 · 항시 표시)</span>
+          </label>
+          <textarea
+            value={profileMemo}
+            onChange={(e) => setProfileMemo(e.target.value)}
+            rows={2}
+            placeholder="예: 무릎 수술 이력, 스쿼트 주의"
+            className="w-full bg-[rgba(232,255,71,0.06)] border border-acc/30 text-tx px-2.5 py-2 rounded-lg text-[0.84rem] outline-none focus:border-acc resize-none leading-relaxed"
+          />
         </div>
       )}
 
