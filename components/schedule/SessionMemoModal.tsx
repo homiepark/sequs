@@ -109,7 +109,7 @@ export function SessionMemoModal({
   }
 
   return (
-    <Modal title="수업 · 회원 메모" onClose={onClose}>
+    <Modal title="수업 메모 · 회원 이슈" onClose={onClose}>
       <div className="mb-3 px-3 py-2 bg-sf2 rounded-lg">
         <div className="font-bebas text-[1.1rem] tracking-wider" style={{ color: t?.hex }}>
           {time}
@@ -125,7 +125,7 @@ export function SessionMemoModal({
       {memberMemo && (
         <div className="mb-3">
           <div className="text-[0.7rem] text-mu mb-1 font-medium flex items-center gap-1">
-            💬 회원 프로필 메모
+            💬 회원 특이사항
             <span className="text-[0.66rem] opacity-60">(회원 탭에서 편집)</span>
           </div>
           <div className="px-3 py-2 bg-[rgba(232,255,71,0.06)] border border-acc/30 rounded-lg text-[0.82rem] leading-relaxed whitespace-pre-wrap">

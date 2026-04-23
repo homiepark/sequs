@@ -262,7 +262,7 @@ export function SessionModal({
           <div className="mb-3 flex flex-col gap-1.5">
             {profileMemo && (
               <div className="px-2.5 py-2 rounded-lg bg-[rgba(232,255,71,0.08)] border border-acc/30">
-                <div className="text-[0.66rem] text-mu font-semibold mb-0.5">💬 회원 프로필 메모</div>
+                <div className="text-[0.66rem] text-mu font-semibold mb-0.5">💬 회원 특이사항</div>
                 <div className="text-[0.8rem] text-tx whitespace-pre-wrap leading-snug">{profileMemo}</div>
               </div>
             )}

@@ -241,7 +241,7 @@ export function ActionMenu({
             <div className="px-4 pb-3 border-b border-bd mb-1.5 flex flex-col gap-2">
               {memberMemoText && (
                 <div className="text-left px-3 py-2 rounded-lg bg-[rgba(232,255,71,0.08)] border border-acc/30">
-                  <div className="text-[0.68rem] text-mu font-semibold mb-1">💬 회원 프로필 메모</div>
+                  <div className="text-[0.68rem] text-mu font-semibold mb-1">💬 회원 특이사항</div>
                   <div className="text-[0.85rem] text-tx whitespace-pre-wrap leading-snug">{memberMemoText}</div>
                 </div>
               )}
@@ -310,7 +310,7 @@ export function ActionMenu({
           <div className="flex flex-col gap-1 p-1.5 mb-1 border-b border-bd pb-2">
             {memberMemoText && (
               <div className="px-2 py-1.5 rounded bg-[rgba(232,255,71,0.08)] border border-acc/30 text-left">
-                <div className="text-[0.64rem] text-mu font-semibold mb-0.5">💬 회원 메모</div>
+                <div className="text-[0.64rem] text-mu font-semibold mb-0.5">💬 회원 특이사항</div>
                 <div className="text-[0.78rem] text-tx whitespace-pre-wrap leading-snug">
                   {memberMemoText}
                 </div>

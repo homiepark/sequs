@@ -417,7 +417,7 @@ function MemberModal({
       </div>
       <div className="mb-3">
         <label className="block text-[0.71rem] text-mu mb-1 font-medium">
-          회원 메모 <span className="text-[0.68rem] opacity-70">(부상 · 선호 · 주의사항 등)</span>
+          회원 특이사항 <span className="text-[0.68rem] opacity-70">(부상 · 선호 · 주의사항 등 · 항시 표시)</span>
         </label>
         <textarea
           value={memo}
