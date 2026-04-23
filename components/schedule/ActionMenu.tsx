@@ -282,7 +282,13 @@ export function ActionMenu({
   }
 
   const x = Math.min(ctx.x, window.innerWidth - 220);
-  const y = Math.min(ctx.y + 4, window.innerHeight - 320);
+  const spaceBelow = window.innerHeight - ctx.y - 12;
+  const spaceAbove = ctx.y - 12;
+  const openUp = spaceBelow < 280 && spaceAbove > spaceBelow;
+  const maxH = Math.max(140, openUp ? spaceAbove : spaceBelow);
+  const y = openUp
+    ? Math.max(8, ctx.y - maxH - 4)
+    : Math.max(8, Math.min(ctx.y + 4, window.innerHeight - 140));
   const mem = sess ? getMember(db, sess.mid) : null;
   const memberMemoText = mem?.memo?.trim();
   const sessKeyTime = sess?.time || time;
@@ -297,8 +303,8 @@ export function ActionMenu({
     <>
       <div className="fixed inset-0 z-[440]" onClick={onClose} />
       <div
-        className="fixed z-[450] bg-sf border border-bd rounded-[11px] p-1.5 min-w-[180px] max-w-[280px] shadow-2xl anim-fade-up"
-        style={{ left: x, top: y }}
+        className="fixed z-[450] bg-sf border border-bd rounded-[11px] p-1.5 min-w-[180px] max-w-[280px] shadow-2xl anim-fade-up overflow-y-auto overscroll-contain"
+        style={{ left: x, top: y, maxHeight: `${maxH}px` }}
       >
         {showMemoBlock && (
           <div className="flex flex-col gap-1 p-1.5 mb-1 border-b border-bd pb-2">
