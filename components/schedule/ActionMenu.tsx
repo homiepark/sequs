@@ -224,12 +224,8 @@ export function ActionMenu({
       <>
         <div className="fixed inset-0 bg-black/55 z-[500]" onClick={onClose} />
         <div
-          className="fixed bottom-0 left-0 right-0 z-[600] bg-sf rounded-t-[18px] border-t border-bd pt-3 anim-fade-up overflow-y-auto overscroll-contain"
-          style={{
-            maxHeight: "min(85dvh, calc(100vh - 40px))",
-            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 36px)",
-            WebkitOverflowScrolling: "touch",
-          }}
+          className="fixed bottom-0 left-0 right-0 z-[600] bg-sf rounded-t-[18px] border-t border-bd pt-3 anim-fade-up max-h-[85vh] overflow-y-auto"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 36px)" }}
         >
           <div className="w-9 h-1 bg-bd rounded-sm mx-auto mb-3.5" />
           <div className="px-4 pb-3 border-b border-bd mb-1.5">
