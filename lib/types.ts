@@ -238,6 +238,16 @@ export function getMember(db: DB, id: string | null | undefined): Member | undef
   return db.members.find((m) => m.id === id);
 }
 
+export function recentMemberMemoLog(m: Member | null | undefined, n: number = 3): MemberMemoEntry[] {
+  if (!m || !m.memoLog || !m.memoLog.length) return [];
+  return [...m.memoLog]
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return a.createdAt < b.createdAt ? 1 : -1;
+    })
+    .slice(0, n);
+}
+
 export function getSessionsForDate(db: DB, ds: string): Session[] {
   const real = db.sessions.filter((s) => s.date === ds);
   const dow = new Date(ds + "T00:00:00").getDay();

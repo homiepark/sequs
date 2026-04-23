@@ -4,7 +4,10 @@ import { useStore } from "@/lib/store";
 import {
   TRAINERS,
   fmtDateToISO,
+  fmtKo,
+  getMember,
   getSessionsForDate,
+  recentMemberMemoLog,
   type Session,
   type TrainerId,
 } from "@/lib/types";
@@ -249,6 +252,36 @@ export function SessionModal({
           onRegisterNew={registerNew}
         />
       </Field>
+
+      {(() => {
+        const mem = getMember(db, sel.mid);
+        const profileMemo = mem?.memo?.trim();
+        const logs = recentMemberMemoLog(mem, 3);
+        if (!profileMemo && !logs.length) return null;
+        return (
+          <div className="mb-3 flex flex-col gap-1.5">
+            {profileMemo && (
+              <div className="px-2.5 py-2 rounded-lg bg-[rgba(232,255,71,0.08)] border border-acc/30">
+                <div className="text-[0.66rem] text-mu font-semibold mb-0.5">💬 회원 프로필 메모</div>
+                <div className="text-[0.8rem] text-tx whitespace-pre-wrap leading-snug">{profileMemo}</div>
+              </div>
+            )}
+            {logs.length > 0 && (
+              <div className="px-2.5 py-2 rounded-lg bg-sf2 border border-bd">
+                <div className="text-[0.66rem] text-mu font-semibold mb-1">📋 최근 이슈 로그</div>
+                <div className="flex flex-col gap-1">
+                  {logs.map((e) => (
+                    <div key={e.id} className="text-[0.78rem] text-tx leading-snug">
+                      <span className="text-acc font-bold mr-1">{fmtKo(e.date)}</span>
+                      <span className="whitespace-pre-wrap">{e.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {!isFixed && (
         <label className="flex items-center gap-2 mb-2 px-1 cursor-pointer">

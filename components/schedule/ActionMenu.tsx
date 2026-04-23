@@ -2,8 +2,10 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
+  fmtKo,
   getMember,
   getTrainer,
+  recentMemberMemoLog,
   sessionSlotKey,
   type Session,
   type TrainerId,
@@ -216,7 +218,8 @@ export function ActionMenu({
       ? (db.sessionMemos || {})[sessionSlotKey(date, tid, sessKeyTime)]?.trim() ||
         (db.sessionMemos || {})[sessionSlotKey(date, tid, time)]?.trim()
       : undefined;
-    const showMemoBlock = !!(memberMemoText || sessionMemoText);
+    const recentLogs = recentMemberMemoLog(mem, 3);
+    const showMemoBlock = !!(memberMemoText || sessionMemoText || recentLogs.length);
     return (
       <>
         <div className="fixed inset-0 bg-black/55 z-[500]" onClick={onClose} />
@@ -248,6 +251,19 @@ export function ActionMenu({
                   <div className="text-[0.85rem] text-tx whitespace-pre-wrap leading-snug">{sessionMemoText}</div>
                 </div>
               )}
+              {recentLogs.length > 0 && (
+                <div className="text-left px-3 py-2 rounded-lg bg-sf2 border border-bd">
+                  <div className="text-[0.68rem] text-mu font-semibold mb-1">📋 최근 이슈 로그</div>
+                  <div className="flex flex-col gap-1.5">
+                    {recentLogs.map((e) => (
+                      <div key={e.id} className="text-[0.82rem] text-tx leading-snug">
+                        <span className="text-acc font-bold mr-1.5">{fmtKo(e.date)}</span>
+                        <span className="whitespace-pre-wrap">{e.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {items.map((b) => (
@@ -274,7 +290,8 @@ export function ActionMenu({
     ? (db.sessionMemos || {})[sessionSlotKey(date, tid, sessKeyTime)]?.trim() ||
       (db.sessionMemos || {})[sessionSlotKey(date, tid, time)]?.trim()
     : undefined;
-  const showMemoBlock = !!(memberMemoText || sessionMemoText);
+  const recentLogs = recentMemberMemoLog(mem, 3);
+  const showMemoBlock = !!(memberMemoText || sessionMemoText || recentLogs.length);
 
   return (
     <>
@@ -298,6 +315,19 @@ export function ActionMenu({
                 <div className="text-[0.64rem] text-orange font-semibold mb-0.5">📝 세션 메모</div>
                 <div className="text-[0.78rem] text-tx whitespace-pre-wrap leading-snug">
                   {sessionMemoText}
+                </div>
+              </div>
+            )}
+            {recentLogs.length > 0 && (
+              <div className="px-2 py-1.5 rounded bg-sf2 border border-bd text-left">
+                <div className="text-[0.64rem] text-mu font-semibold mb-0.5">📋 최근 이슈 로그</div>
+                <div className="flex flex-col gap-1">
+                  {recentLogs.map((e) => (
+                    <div key={e.id} className="text-[0.75rem] text-tx leading-snug">
+                      <span className="text-acc font-bold mr-1">{fmtKo(e.date)}</span>
+                      <span className="whitespace-pre-wrap">{e.text}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
