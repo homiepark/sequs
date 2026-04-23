@@ -268,7 +268,7 @@ export function SessionModal({
             )}
             {logs.length > 0 && (
               <div className="px-2.5 py-2 rounded-lg bg-sf2 border border-bd">
-                <div className="text-[0.66rem] text-mu font-semibold mb-1">📋 최근 이슈 로그</div>
+                <div className="text-[0.66rem] text-mu font-semibold mb-1">📋 최근 회원 이슈</div>
                 <div className="flex flex-col gap-1">
                   {logs.map((e) => (
                     <div key={e.id} className="text-[0.78rem] text-tx leading-snug">

@@ -429,7 +429,7 @@ function MemberModal({
       </div>
       <div className="mb-3">
         <label className="block text-[0.71rem] text-mu mb-1 font-medium">
-          일자별 이슈 기록 <span className="text-[0.68rem] opacity-70">(그날 중요한 이슈 · 컨디션 · 특이사항)</span>
+          📋 회원 이슈 <span className="text-[0.68rem] opacity-70">(일자별 누적 · 그날 이슈/컨디션/특이사항)</span>
         </label>
         <div className="flex gap-1.5 mb-2">
           <input
