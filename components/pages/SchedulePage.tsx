@@ -9,6 +9,7 @@ import {
   getSessionsForDate,
   getTrainer,
   isSlotBlocked,
+  unblockSlot,
   weekDates,
   type Session,
   type TrainerId,
@@ -485,11 +486,7 @@ function Cell({
           time={time}
           tid={tid}
           onUnblock={() => {
-            mutate("차단 해제", (d) => {
-              const key = `${ds}_${tid}_${time}`;
-              delete d.blocks[key];
-              if (d.blockReasons) delete d.blockReasons[key];
-            });
+            mutate("차단 해제", (d) => unblockSlot(d, ds, tid, time));
           }}
         />
       ) : sess ? (
@@ -599,11 +596,7 @@ function AllTrainerDayView({
                         time={h}
                         tid={t.id}
                         onUnblock={() => {
-                          mutate("차단 해제", (d) => {
-                            const key = `${ds}_${t.id}_${h}`;
-                            delete d.blocks[key];
-                            if (d.blockReasons) delete d.blockReasons[key];
-                          });
+                          mutate("차단 해제", (d) => unblockSlot(d, ds, t.id, h));
                         }}
                       />
                     ) : sess ? (
@@ -752,11 +745,7 @@ function WeekAllView({
                                 time={h}
                                 tid={t.id}
                                 onUnblock={() => {
-                                  mutate("차단 해제", (d) => {
-                                    const key = `${ds}_${t.id}_${h}`;
-                                    delete d.blocks[key];
-                                    if (d.blockReasons) delete d.blockReasons[key];
-                                  });
+                                  mutate("차단 해제", (d) => unblockSlot(d, ds, t.id, h));
                                 }}
                               />
                             ) : sess ? (
@@ -801,17 +790,17 @@ function BlockedCellContent({
       (!b.startDate || ds >= b.startDate) &&
       (!b.endDate || ds <= b.endDate)
   );
-  const fixedLabel = fb?.label;
   const oneOffReason = (db.blockReasons || {})[`${ds}_${tid}_${time}`];
 
-  if (fixedLabel) {
+  if (fb) {
+    const text = fb.label || "고정 차단";
     return (
       <div
         className="w-full h-full flex items-center justify-center text-[0.7rem] md:text-[0.82rem] font-bold px-1 text-center leading-tight"
         style={{ color: "#d4a800" }}
-        title={`${fixedLabel} (고정 차단)`}
+        title={fb.label ? `${fb.label} (고정 차단)` : "고정 차단 (셀을 눌러 메뉴에서 해제)"}
       >
-        {fixedLabel}
+        {text}
       </div>
     );
   }

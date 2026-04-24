@@ -229,6 +229,21 @@ export function isSlotBlocked(db: DB, ds: string, tid: TrainerId, time: string):
   });
 }
 
+export function unblockSlot(d: DB, ds: string, tid: TrainerId, time: string): void {
+  const key = sessionSlotKey(ds, tid, time);
+  delete d.blocks[key];
+  if (d.blockReasons) delete d.blockReasons[key];
+  const dow = new Date(ds + "T00:00:00").getDay();
+  const dowA = dow === 0 ? 7 : dow;
+  d.fixedBlocks = (d.fixedBlocks || [])
+    .map((fb) => {
+      if (fb.dayOfWeek !== dowA) return fb;
+      if (fb.tid !== "all" && fb.tid !== tid) return fb;
+      return { ...fb, times: fb.times.filter((t) => t !== time) };
+    })
+    .filter((fb) => fb.times.length > 0);
+}
+
 export function getTrainer(id: string): Trainer | undefined {
   return TRAINERS.find((t) => t.id === id);
 }

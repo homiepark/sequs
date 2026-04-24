@@ -7,6 +7,7 @@ import {
   getTrainer,
   recentMemberMemoLog,
   sessionSlotKey,
+  unblockSlot,
   type Session,
   type TrainerId,
 } from "@/lib/types";
@@ -60,7 +61,6 @@ export function ActionMenu({
   const hasS = !!sess;
 
   function run(a: Action) {
-    const bKey = `${date}_${tid}_${time}`;
     if (a === "book") {
       onBookOrEdit("book", null);
       return;
@@ -99,18 +99,7 @@ export function ActionMenu({
     }
     if (a === "unblock") {
       if (!confirm("시간 차단을 해제할까요?")) return onClose();
-      mutate("차단 해제", (d) => {
-        delete d.blocks[bKey];
-        if (d.blockReasons) delete d.blockReasons[bKey];
-        // Also remove matching fixedBlock entry for this slot if any
-        const dow = new Date(date + "T00:00:00").getDay();
-        const dowA = dow === 0 ? 7 : dow;
-        d.fixedBlocks = (d.fixedBlocks || []).map((fb) => {
-          if (fb.dayOfWeek !== dowA) return fb;
-          if (fb.tid !== "all" && fb.tid !== tid) return fb;
-          return { ...fb, times: fb.times.filter((t) => t !== time) };
-        }).filter((fb) => fb.times.length > 0);
-      });
+      mutate("차단 해제", (d) => unblockSlot(d, date, tid, time));
     }
     if (a === "precan" && sess) {
       const mem = getMember(db, sess.mid);
