@@ -64,6 +64,7 @@ export interface FixedBlock {
   label?: string;
   startDate?: string | null;
   endDate?: string | null;
+  skippedDates?: string[];
 }
 
 export type AttStatus = "present" | "absent" | "precancel" | "daycancel";
@@ -225,6 +226,7 @@ export function isSlotBlocked(db: DB, ds: string, tid: TrainerId, time: string):
     if (fb.startDate && ds < fb.startDate) return false;
     if (fb.endDate && ds > fb.endDate) return false;
     if (fb.tid !== "all" && fb.tid !== tid) return false;
+    if (fb.skippedDates && fb.skippedDates.includes(ds)) return false;
     return fb.times.includes(time);
   });
 }
@@ -235,13 +237,16 @@ export function unblockSlot(d: DB, ds: string, tid: TrainerId, time: string): vo
   if (d.blockReasons) delete d.blockReasons[key];
   const dow = new Date(ds + "T00:00:00").getDay();
   const dowA = dow === 0 ? 7 : dow;
-  d.fixedBlocks = (d.fixedBlocks || [])
-    .map((fb) => {
-      if (fb.dayOfWeek !== dowA) return fb;
-      if (fb.tid !== "all" && fb.tid !== tid) return fb;
-      return { ...fb, times: fb.times.filter((t) => t !== time) };
-    })
-    .filter((fb) => fb.times.length > 0);
+  d.fixedBlocks = (d.fixedBlocks || []).map((fb) => {
+    if (fb.dayOfWeek !== dowA) return fb;
+    if (fb.tid !== "all" && fb.tid !== tid) return fb;
+    if (!fb.times.includes(time)) return fb;
+    if (fb.startDate && ds < fb.startDate) return fb;
+    if (fb.endDate && ds > fb.endDate) return fb;
+    const skipped = fb.skippedDates || [];
+    if (skipped.includes(ds)) return fb;
+    return { ...fb, skippedDates: [...skipped, ds] };
+  });
 }
 
 export function getTrainer(id: string): Trainer | undefined {

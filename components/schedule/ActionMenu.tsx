@@ -98,7 +98,7 @@ export function ActionMenu({
       });
     }
     if (a === "unblock") {
-      if (!confirm("시간 차단을 해제할까요?")) return onClose();
+      if (!confirm("이 날짜의 시간 차단을 해제할까요?\n\n(고정 차단인 경우 다른 주는 그대로 유지됩니다)")) return onClose();
       mutate("차단 해제", (d) => unblockSlot(d, date, tid, time));
     }
     if (a === "precan" && sess) {
