@@ -180,9 +180,15 @@ export function emptyDB(): DB {
   };
 }
 
+function arrFromMaybeMap<T>(v: unknown): T[] {
+  if (Array.isArray(v)) return v as T[];
+  if (v && typeof v === "object") return Object.values(v as Record<string, T>);
+  return [];
+}
+
 export function normalizeDB(raw: unknown): DB {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-  const rawMembers = Array.isArray(r.members) ? (r.members as Member[]) : [];
+  const rawMembers = arrFromMaybeMap<Member>(r.members);
   const members = rawMembers.map((m) => ({
     ...m,
     tids: m.tids && Array.isArray(m.tids) && m.tids.length ? m.tids : m.tid ? [m.tid] : [],
@@ -194,16 +200,16 @@ export function normalizeDB(raw: unknown): DB {
   }));
   return {
     members,
-    sessions: Array.isArray(r.sessions) ? (r.sessions as Session[]) : [],
-    fixedSchedules: Array.isArray(r.fixedSchedules) ? (r.fixedSchedules as FixedSchedule[]) : [],
-    fixedBlocks: Array.isArray(r.fixedBlocks) ? (r.fixedBlocks as FixedBlock[]) : [],
+    sessions: arrFromMaybeMap<Session>(r.sessions),
+    fixedSchedules: arrFromMaybeMap<FixedSchedule>(r.fixedSchedules),
+    fixedBlocks: arrFromMaybeMap<FixedBlock>(r.fixedBlocks),
     att: r.att && typeof r.att === "object" ? (r.att as Record<string, AttStatus>) : {},
     blocks: r.blocks && typeof r.blocks === "object" ? (r.blocks as Record<string, boolean>) : {},
     blockReasons:
       r.blockReasons && typeof r.blockReasons === "object"
         ? (r.blockReasons as Record<string, string>)
         : {},
-    cancelHistory: Array.isArray(r.cancelHistory) ? (r.cancelHistory as CancelHistoryEntry[]) : [],
+    cancelHistory: arrFromMaybeMap<CancelHistoryEntry>(r.cancelHistory),
     memos: r.memos && typeof r.memos === "object" ? (r.memos as Record<string, string>) : {},
     sessionMemos:
       r.sessionMemos && typeof r.sessionMemos === "object"
