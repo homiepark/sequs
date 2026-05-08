@@ -50,15 +50,13 @@ export function subscribeDB(cb: (data: DB | null) => void): () => void {
 }
 
 export function writeDB(data: DB): Promise<void> {
+  let cleaned: DB;
   try {
-    const cleaned = JSON.parse(JSON.stringify(data)) as DB;
-    return set(dbRef(), cleaned).catch((err) => {
-      console.warn("Firebase write error:", err);
-    });
+    cleaned = JSON.parse(JSON.stringify(data)) as DB;
   } catch (err) {
-    console.warn("Firebase write sync error:", err);
-    return Promise.resolve();
+    return Promise.reject(err);
   }
+  return set(dbRef(), cleaned);
 }
 
 export function writeBackupSnapshot(data: DB): Promise<void> {

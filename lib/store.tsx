@@ -15,12 +15,14 @@ export type MutateFn = (label: string, updater: (draft: DB) => void) => void;
 interface StoreContext {
   db: DB;
   sync: SyncState;
+  syncError: string | null;
   mutate: MutateFn;
   undo: () => boolean;
   canUndo: boolean;
   lastAction: string | null;
   exportJSON: () => string;
   importJSON: (text: string) => boolean;
+  retrySync: () => void;
 }
 
 const Ctx = createContext<StoreContext | null>(null);
@@ -47,10 +49,16 @@ function writeLocal(db: DB) {
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<DB>(() => emptyDB());
   const [sync, setSync] = useState<SyncState>("local");
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<string | null>(null);
   const historyRef = useRef<{ label: string; db: DB }[]>([]);
   const [canUndo, setCanUndo] = useState(false);
-  const remoteApplyingRef = useRef(false);
+  const writeFailedRef = useRef(false);
+  const dbRef2 = useRef<DB>(db);
+
+  useEffect(() => {
+    dbRef2.current = db;
+  }, [db]);
 
   useEffect(() => {
     setDb(readLocal());
@@ -61,24 +69,47 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try {
       unsub = subscribeDB((remote) => {
         if (remote) {
+          // CRITICAL: if our last write to Firebase failed, the server has
+          // STALE data relative to our local. Letting it overwrite local
+          // would silently undo the user's edits. Skip until a write succeeds.
+          if (writeFailedRef.current) {
+            console.warn("[sync] skipping remote update — pending write failure");
+            return;
+          }
           const normalized = normalizeDB(remote);
-          remoteApplyingRef.current = true;
           setDb((prev) => {
             if (JSON.stringify(prev) === JSON.stringify(normalized)) return prev;
             return normalized;
           });
-          setSync("syncing");
           writeLocal(normalized);
-          setTimeout(() => (remoteApplyingRef.current = false), 0);
         }
       });
     } catch (e) {
       console.warn("Firebase init failed:", e);
       setSync("error");
+      setSyncError(String((e as Error)?.message || e));
     }
     return () => {
       if (unsub) unsub();
     };
+  }, []);
+
+  const fireWrite = useCallback((next: DB) => {
+    setSync("syncing");
+    writeDB(next).then(
+      () => {
+        writeFailedRef.current = false;
+        setSync("local");
+        setSyncError(null);
+      },
+      (err) => {
+        writeFailedRef.current = true;
+        setSync("error");
+        const msg = String((err as { message?: string; code?: string })?.code || (err as Error)?.message || err);
+        setSyncError(msg);
+        console.warn("[sync] writeDB failed:", err);
+      }
+    );
   }, []);
 
   useEffect(() => {
@@ -101,25 +132,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [db]);
 
-  const mutate = useCallback((label: string, updater: (draft: DB) => void) => {
-    setDb((prev) => {
-      const snap = clone(prev);
-      historyRef.current.push({ label, db: snap });
-      if (historyRef.current.length > MAX_HISTORY) historyRef.current.shift();
-      setCanUndo(historyRef.current.length > 0);
-      setLastAction(label);
+  const mutate = useCallback(
+    (label: string, updater: (draft: DB) => void) => {
+      setDb((prev) => {
+        const snap = clone(prev);
+        historyRef.current.push({ label, db: snap });
+        if (historyRef.current.length > MAX_HISTORY) historyRef.current.shift();
+        setCanUndo(historyRef.current.length > 0);
+        setLastAction(label);
 
-      const next = clone(prev);
-      updater(next);
-      writeLocal(next);
-      try {
-        writeDB(next);
-      } catch (err) {
-        console.warn("writeDB failed:", err);
-      }
-      return next;
-    });
-  }, []);
+        const next = clone(prev);
+        updater(next);
+        writeLocal(next);
+        fireWrite(next);
+        return next;
+      });
+    },
+    [fireWrite]
+  );
 
   const undo = useCallback((): boolean => {
     const entry = historyRef.current.pop();
@@ -128,11 +158,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setLastAction(`↩️ 되돌림: ${entry.label}`);
     setDb(() => {
       writeLocal(entry.db);
-      writeDB(entry.db);
+      fireWrite(entry.db);
       return entry.db;
     });
     return true;
-  }, []);
+  }, [fireWrite]);
+
+  const retrySync = useCallback(() => {
+    fireWrite(dbRef2.current);
+  }, [fireWrite]);
 
   const exportJSON = useCallback(() => JSON.stringify(db, null, 2), [db]);
 
@@ -152,8 +186,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo<StoreContext>(
-    () => ({ db, sync, mutate, undo, canUndo, lastAction, exportJSON, importJSON }),
-    [db, sync, mutate, undo, canUndo, lastAction, exportJSON, importJSON]
+    () => ({ db, sync, syncError, mutate, undo, canUndo, lastAction, exportJSON, importJSON, retrySync }),
+    [db, sync, syncError, mutate, undo, canUndo, lastAction, exportJSON, importJSON, retrySync]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

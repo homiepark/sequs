@@ -12,11 +12,12 @@ const PAGES: { id: Page; label: string }[] = [
 ];
 
 export function Header({ page, onChange }: { page: Page; onChange: (p: Page) => void }) {
-  const { db, sync, canUndo, undo } = useStore();
+  const { db, sync, syncError, canUndo, undo, retrySync } = useStore();
   const { highlightMid, setHighlightMid } = useHighlight();
   const syncLabel =
     sync === "syncing" ? "☁️ 동기화 중" : sync === "error" ? "⚠️ 오류" : "💾 로컬";
-  const syncColor = sync === "syncing" ? "text-green" : "text-mu";
+  const syncColor =
+    sync === "syncing" ? "text-green" : sync === "error" ? "text-red" : "text-mu";
 
   const highlightMember = highlightMid ? db.members.find((m) => m.id === highlightMid) : null;
 
@@ -54,6 +55,20 @@ export function Header({ page, onChange }: { page: Page; onChange: (p: Page) => 
         )}
         <InstallButton />
       </header>
+      {sync === "error" && (
+        <div className="bg-red/20 border-b border-red px-4 py-2 flex items-center justify-center gap-2 sticky top-[54px] z-[99] flex-wrap">
+          <span className="text-[0.78rem] text-red font-bold">
+            ⚠️ 동기화 실패 — 수정사항이 서버에 저장되지 않았어요
+          </span>
+          {syncError && <span className="text-[0.7rem] text-mu">({syncError})</span>}
+          <button
+            onClick={retrySync}
+            className="text-[0.74rem] bg-sf2 border border-red text-red hover:bg-red hover:text-white px-2 py-0.5 rounded font-bold"
+          >
+            재시도
+          </button>
+        </div>
+      )}
       {highlightMember && (
         <div className="bg-acc/15 border-b border-acc/40 px-4 py-1.5 flex items-center justify-center gap-2 sticky top-[54px] z-[99]">
           <span className="text-[0.78rem] text-tx">
