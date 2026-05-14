@@ -23,11 +23,13 @@ export function BulkBlockModal({
   time,
   tid,
   onClose,
+  directCancel = false,
 }: {
   date: string;
   time: string;
   tid: TrainerId;
   onClose: () => void;
+  directCancel?: boolean;
 }) {
   const { db, mutate } = useStore();
   const [times, setTimes] = useState<string[]>([time]);
@@ -162,6 +164,70 @@ export function BulkBlockModal({
 
     applyBlock(targets, trimmedReason);
     onClose();
+  }
+
+  if (directCancel) {
+    const trainerName = TRAINERS.find((t) => t.id === tid)?.name;
+    return (
+      <Modal title="수업 캔슬 + 차단" onClose={onClose}>
+        <div className="text-[0.8rem] text-mu mb-3">
+          {date} · {time} · {trainerName}
+        </div>
+
+        {conflicts.length > 0 ? (
+          <div className="mb-3 px-2.5 py-2 rounded-lg bg-orange/10 border border-orange/40">
+            <div className="text-[0.78rem] text-orange font-bold mb-1.5">
+              ⚠️ 이 시간 수업
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {conflicts.map((c, i) => {
+                const tr = TRAINERS.find((t) => t.id === c.tid);
+                return (
+                  <div key={i} className="text-[0.84rem] text-tx flex items-center gap-2">
+                    <span className="font-bold" style={{ color: tr?.hex }}>
+                      {c.memberName}
+                    </span>
+                    <span className="text-[0.72rem] text-mu">({c.time})</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-3 px-2.5 py-2 rounded-lg bg-sf2 border border-bd text-[0.78rem] text-mu">
+            이 시간엔 활성 수업이 없어요. 그냥 차단됩니다.
+          </div>
+        )}
+
+        <div className="mb-3">
+          <label className="block text-[0.71rem] text-mu mb-1 font-medium">
+            차단 사유 <span className="opacity-70">(선택)</span>
+          </label>
+          <input
+            autoFocus
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="피티, 미팅, 병원 등"
+            className="w-full bg-sf2 border border-bd text-tx px-2.5 py-2 rounded-lg text-[0.84rem] outline-none focus:border-acc"
+          />
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-lg bg-sf2 text-tx font-bold text-[0.83rem]"
+          >
+            취소
+          </button>
+          <button
+            onClick={conflicts.length > 0 ? cancelAndBlock : () => { applyBlock([tid], reason.trim()); onClose(); }}
+            className="flex-1 py-2.5 rounded-lg bg-orange text-white font-bold text-[0.83rem]"
+          >
+            {conflicts.length > 0 ? "📵 캔슬 + 차단" : "🚫 차단"}
+          </button>
+        </div>
+      </Modal>
+    );
   }
 
   return (

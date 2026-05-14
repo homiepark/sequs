@@ -50,7 +50,12 @@ export function SchedulePage() {
     tid: TrainerId;
     existing: Session | null;
   } | null>(null);
-  const [blockModal, setBlockModal] = useState<{ date: string; time: string; tid: TrainerId } | null>(null);
+  const [blockModal, setBlockModal] = useState<{
+    date: string;
+    time: string;
+    tid: TrainerId;
+    directCancel?: boolean;
+  } | null>(null);
   const [memoModal, setMemoModal] = useState<{
     date: string;
     time: string;
@@ -222,8 +227,13 @@ export function SchedulePage() {
             });
             setAction(null);
           }}
-          onBlock={() => {
-            setBlockModal({ date: action.date, time: action.time, tid: action.tid });
+          onBlock={(opts) => {
+            setBlockModal({
+              date: action.date,
+              time: action.time,
+              tid: action.tid,
+              directCancel: !!opts?.directCancel,
+            });
             setAction(null);
           }}
           onMemo={() => {
@@ -257,6 +267,7 @@ export function SchedulePage() {
           date={blockModal.date}
           time={blockModal.time}
           tid={blockModal.tid}
+          directCancel={blockModal.directCancel}
           onClose={() => setBlockModal(null)}
         />
       )}
@@ -339,6 +350,17 @@ function SingleTrainerView({
     }).length;
   });
   const weekTotal = dayCounts.reduce((a, b) => a + b, 0);
+  const weekFree = days.reduce((acc, d) => {
+    const ds = fmtDateToISO(d);
+    return (
+      acc +
+      getSessionsForDate(db, ds).filter((s) => {
+        if (s.tid !== tid || !s.isFree) return false;
+        const st = db.att[`${ds}_${s.id}`];
+        return st !== "precancel" && st !== "daycancel" && st !== "absent";
+      }).length
+    );
+  }, 0);
 
   return (
     <>
@@ -348,6 +370,9 @@ function SingleTrainerView({
           style={{ background: t.hex }}
         >
           {t.name} · 이번 주 {weekTotal}회
+          {weekFree > 0 && (
+            <span className="ml-1 opacity-75">(🎁 {weekFree})</span>
+          )}
         </span>
         <div className="flex gap-1 flex-wrap text-[0.72rem] md:text-[0.82rem] text-mu">
           {days.map((d, i) => (
