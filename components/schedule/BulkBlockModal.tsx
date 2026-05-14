@@ -46,7 +46,9 @@ export function BulkBlockModal({
     const list: Conflict[] = [];
     const all = getSessionsForDate(db, date);
     for (const s of all) {
-      if (!times.includes(s.time)) continue;
+      // sessions at :30 render in the hour-row cell, so match by hour
+      const sessHour = s.time.replace(":30", ":00");
+      if (!times.includes(sessHour)) continue;
       if (!targets.includes(s.tid)) continue;
       const st = db.att[`${date}_${s.id}`];
       if (st === "precancel" || st === "daycancel") continue;
@@ -113,7 +115,10 @@ export function BulkBlockModal({
   function skipAndBlock() {
     const targets: TrainerId[] = allTrainers ? TRAINERS.map((t) => t.id) : [tid];
     const trimmedReason = reason.trim();
-    const blockedSet = new Set(conflicts.map((c) => `${c.tid}_${c.time}`));
+    // normalize conflict times to hour so they match selected hour slots
+    const blockedSet = new Set(
+      conflicts.map((c) => `${c.tid}_${c.time.replace(":30", ":00")}`)
+    );
     mutate("시간 차단 (수업 자리는 건너뜀)", (d) => {
       d.blockReasons = d.blockReasons || {};
       for (const t of targets) {
