@@ -21,7 +21,7 @@ export function StatsPage() {
   const [trF, setTrF] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const { present, absent, precan, daycan } = useMemo(() => {
+  const { present, free, absent, precan, daycan } = useMemo(() => {
     const prefix = `${yr}-${String(mo).padStart(2, "0")}`;
     const dim = new Date(yr, mo, 0).getDate();
     const today = new Date().toISOString().slice(0, 10);
@@ -32,11 +32,13 @@ export function StatsPage() {
       getSessionsForDate(db, ds).forEach((s) => all.push(s));
     }
     const f = trF ? all.filter((s) => s.tid === trF) : all;
+    const presentAll = f.filter((s) => {
+      const st = db.att[`${s.date}_${s.id}`];
+      return st !== "precancel" && st !== "daycancel" && st !== "absent";
+    });
     return {
-      present: f.filter((s) => {
-        const st = db.att[`${s.date}_${s.id}`];
-        return st !== "precancel" && st !== "daycancel" && st !== "absent";
-      }),
+      present: presentAll,
+      free: presentAll.filter((s) => s.isFree),
       absent: f.filter((s) => db.att[`${s.date}_${s.id}`] === "absent"),
       precan: f.filter((s) => db.att[`${s.date}_${s.id}`] === "precancel"),
       daycan: f.filter((s) => db.att[`${s.date}_${s.id}`] === "daycancel"),
@@ -121,6 +123,7 @@ export function StatsPage() {
 
       <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))" }}>
         <KPI label="출석" value={present.length} color="text-acc" />
+        <KPI label="🎁 무료" value={free.length} color="text-orange" />
         <KPI label="결석" value={absent.length} color="text-acc2" />
         <KPI label="사전캔슬" value={precan.length} color="text-t2" />
         <KPI label="당일캔슬" value={daycan.length} color="text-acc2" />
@@ -236,7 +239,9 @@ function SalarySection({
         {targets.map((t) => {
           const excluded = SALARY_EXCLUDED[t.id];
           if (excluded) {
-            const sessions = present.filter((s) => s.tid === t.id).length;
+            const trainerPresent = present.filter((s) => s.tid === t.id);
+            const sessions = trainerPresent.length;
+            const freeCount = trainerPresent.filter((s) => s.isFree).length;
             return (
               <div key={t.id} className="bg-sf border rounded-xl p-4" style={{ borderColor: t.hex + "55" }}>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -244,7 +249,9 @@ function SalarySection({
                   <span className="font-bold text-[0.95rem] md:text-[1.1rem]" style={{ color: t.hex }}>
                     {t.name}
                   </span>
-                  <span className="text-[0.76rem] text-mu">수업 {sessions}회</span>
+                  <span className="text-[0.76rem] text-mu">
+                    수업 {sessions}회{freeCount ? ` · 🎁 무료 ${freeCount}회` : ""}
+                  </span>
                 </div>
                 <div className="text-[0.8rem] text-mu">{excluded}</div>
               </div>
@@ -256,7 +263,10 @@ function SalarySection({
           const cfg = cfgMaybe;
 
           const tid = t.id;
-          const sessions = present.filter((s) => s.tid === tid).length;
+          const trainerPresent = present.filter((s) => s.tid === tid);
+          const freeCount = trainerPresent.filter((s) => s.isFree).length;
+          const sessions = trainerPresent.length - freeCount;
+          const totalSessions = trainerPresent.length;
           const key = `${monthKey}_${tid}`;
           const extras = (db.monthlyExtras || {})[key] || {};
           const volansCount = extras.volansCount || 0;
@@ -280,7 +290,9 @@ function SalarySection({
           function copy() {
             const lines = [
               `${t.name} · ${monthKey}`,
-              `수업수\t${sessions}`,
+              `총 수업\t${totalSessions}`,
+              `무료 수업\t${freeCount}`,
+              `유료 수업수\t${sessions}`,
               `수업 단가\t${cfg.sessionPrice}`,
               `세션료\t${sessionFee}`,
               `근로소득\t${cfg.laborIncome}`,
@@ -309,7 +321,9 @@ function SalarySection({
                   <span className="font-bold text-[0.95rem] md:text-[1.1rem]" style={{ color: t.hex }}>
                     {t.name}
                   </span>
-                  <span className="text-[0.76rem] text-mu">수업 {sessions}회</span>
+                  <span className="text-[0.76rem] text-mu">
+                    수업 {totalSessions}회{freeCount ? ` (유료 ${sessions} + 🎁 ${freeCount})` : ""}
+                  </span>
                 </div>
                 <button
                   onClick={copy}
@@ -320,7 +334,10 @@ function SalarySection({
               </div>
 
               <div className="grid grid-cols-2 gap-2 mb-3">
-                <Stat label={`수업료 (${won(cfg.sessionPrice)} × ${sessions})`} value={won(sessionFee)} />
+                <Stat
+                  label={`수업료 (${won(cfg.sessionPrice)} × ${sessions}${freeCount ? ` · 🎁 ${freeCount}회 제외` : ""})`}
+                  value={won(sessionFee)}
+                />
                 <Stat label="근로소득" value={won(cfg.laborIncome)} muted />
                 <Stat label="4대보험" value={`− ${won(cfg.insurance)}`} muted />
                 <Stat label="퇴직금" value={`− ${won(cfg.retirement)}`} muted />

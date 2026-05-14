@@ -42,6 +42,8 @@ export interface Session {
   isFixed?: boolean;
   fixedId?: string;
   isTentative?: boolean;
+  isFree?: boolean;
+  freeReason?: string;
 }
 
 export interface FixedSchedule {

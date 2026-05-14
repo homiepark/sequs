@@ -15,6 +15,8 @@ import { Modal } from "../ui/Modal";
 import { MemberAutocomplete, type MemberSelection } from "./MemberAutocomplete";
 import { FixedConflictModal, type Conflict } from "./FixedConflictModal";
 
+const FREE_REASON_PRESETS = ["체험", "보상/사과", "이벤트"];
+
 export function SessionModal({
   date,
   time,
@@ -43,6 +45,8 @@ export function SessionModal({
   const [fixedEnd, setFixedEnd] = useState("");
   const [noEnd, setNoEnd] = useState(false);
   const [isTentative, setIsTentative] = useState<boolean>(!!existing?.isTentative);
+  const [isFree, setIsFree] = useState<boolean>(!!existing?.isFree);
+  const [freeReason, setFreeReason] = useState<string>(existing?.freeReason || "");
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
 
   const preview = useMemo(() => {
@@ -153,6 +157,8 @@ export function SessionModal({
       return;
     }
 
+    const reasonOut = isFree && freeReason.trim() ? freeReason.trim() : undefined;
+
     if (existing && existing.isFixed) {
       mutate("이번만 수정", (d) => {
         const baseOrig = existing.time.replace(":30", ":00");
@@ -172,6 +178,8 @@ export function SessionModal({
           mid: memId,
           customName: cname,
           isTentative: isTentative || undefined,
+          isFree: isFree || undefined,
+          freeReason: reasonOut,
         });
         delete d.att[`${date}_${existing.id}`];
       });
@@ -186,10 +194,12 @@ export function SessionModal({
           mid: memId,
           customName: cname,
           isTentative: isTentative || undefined,
+          isFree: isFree || undefined,
+          freeReason: reasonOut,
         });
       });
     } else {
-      mutate(isTentative ? "가예약 등록" : "수업 예약", (d) => {
+      mutate(isTentative ? "가예약 등록" : isFree ? "무료 수업 등록" : "수업 예약", (d) => {
         d.sessions = d.sessions.filter(
           (s) => !(s.date === date && s.time === actualTime && s.tid === tid)
         );
@@ -201,6 +211,8 @@ export function SessionModal({
           mid: memId,
           customName: cname,
           isTentative: isTentative || undefined,
+          isFree: isFree || undefined,
+          freeReason: reasonOut,
         });
       });
     }
@@ -296,6 +308,54 @@ export function SessionModal({
             <span className="text-[0.72rem] text-mu ml-1">(취소 시 기록 없이 삭제)</span>
           </span>
         </label>
+      )}
+
+      {!isFixed && (
+        <div className="mb-2 px-1">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isFree}
+              onChange={(e) => {
+                setIsFree(e.target.checked);
+                if (!e.target.checked) setFreeReason("");
+              }}
+              className="w-[15px] h-[15px] cursor-pointer"
+            />
+            <span className="text-[0.82rem]">
+              🎁 무료 수업
+              <span className="text-[0.72rem] text-mu ml-1">(급여 정산에서 제외)</span>
+            </span>
+          </label>
+          {isFree && (
+            <div className="mt-2 ml-[22px] flex items-center gap-1.5 flex-wrap">
+              {FREE_REASON_PRESETS.map((r) => {
+                const on = freeReason === r;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setFreeReason(on ? "" : r)}
+                    className={`px-2 py-0.5 rounded text-[0.74rem] font-semibold border ${
+                      on
+                        ? "bg-acc text-black border-acc"
+                        : "bg-sf2 text-tx border-bd hover:border-acc hover:text-acc"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                );
+              })}
+              <input
+                type="text"
+                placeholder="기타 사유 (선택)"
+                value={FREE_REASON_PRESETS.includes(freeReason) ? "" : freeReason}
+                onChange={(e) => setFreeReason(e.target.value)}
+                className="flex-1 min-w-[110px] bg-sf2 border border-bd text-tx px-2 py-0.5 rounded text-[0.78rem]"
+              />
+            </div>
+          )}
+        </div>
       )}
 
       {!existing && !isTentative && (
