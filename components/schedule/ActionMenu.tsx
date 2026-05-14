@@ -179,10 +179,16 @@ export function ActionMenu({
   const hasMemo =
     !!(db.sessionMemos || {})[`${date}_${tid}_${memoKeyTime}`]?.trim() ||
     !!(db.sessionMemos || {})[`${date}_${tid}_${time}`]?.trim();
-  const canBlock = !isB && (!hasS || isCan);
+  const canBlock = !isB;
   const allItems: { a: Action; label: string; icon: string; cls?: string; show: boolean }[] = [
     { a: "book", label: "수업 예약", icon: "📅", show: !hasS && !isB },
-    { a: "block", label: "시간 차단", icon: "🚫", cls: "text-[#c9a800]", show: canBlock },
+    {
+      a: "block",
+      label: hasS && !isCan ? "시간 차단 (수업 캔슬됨)" : "시간 차단",
+      icon: "🚫",
+      cls: "text-[#c9a800]",
+      show: canBlock,
+    },
     { a: "confirm", label: "가예약 → 확정", icon: "✅", cls: "text-green", show: hasS && isTent },
     { a: "edit", label: isTent ? "가예약 수정" : "이번만 수정", icon: "✏️", cls: "text-orange", show: hasS && !isCan },
     { a: "memo", label: hasMemo ? "메모 수정" : "메모 작성", icon: "📝", show: hasS },
