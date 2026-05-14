@@ -49,7 +49,7 @@ export function ActionMenu({
   ctx: ActionContext;
   onClose: () => void;
   onBookOrEdit: (mode: "book" | "edit", existing: Session | null) => void;
-  onBlock: () => void;
+  onBlock: (opts?: { directCancel?: boolean }) => void;
   onMemo: () => void;
   onSetEnd: (fixedId: string) => void;
 }) {
@@ -74,7 +74,7 @@ export function ActionMenu({
       return;
     }
     if (a === "block") {
-      onBlock();
+      onBlock({ directCancel: hasS && !isCan });
       return;
     }
     if (a === "memo") {
