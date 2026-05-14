@@ -88,11 +88,11 @@ export function SessionCard({
         )}
         {sess.isFree && (
           <span
-            className="inline-block rounded px-1 font-bold tracking-wider leading-none bg-white/85 text-black"
+            className="inline-block rounded px-1 font-bold tracking-wider leading-none bg-white/85 text-black whitespace-nowrap"
             style={{ fontSize: `${tagSize}rem` }}
             title={sess.freeReason ? `무료 — ${sess.freeReason}` : "무료 수업"}
           >
-            🎁
+            🎁{sess.freeReason && sess.freeReason.length <= 6 ? ` ${sess.freeReason}` : ""}
           </span>
         )}
         {sess.isFixed && (

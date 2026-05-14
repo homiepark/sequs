@@ -75,13 +75,16 @@ export function StatsPage() {
   }
 
   function copyTbl(
-    rows: [string, { count: number; isGuest: boolean; name: string }][],
+    rows: [string, { count: number; isGuest: boolean; name: string; freeCount: number; freeReasons: Set<string> }][],
     notifyId: string
   ) {
-    let text = "#\t회원\t출석 횟수\n";
+    let text = "#\t회원\t출석 횟수\t무료\n";
     rows.forEach(([, v], i) => {
       const label = v.isGuest ? `미등록 · ${v.name}` : v.name;
-      text += `${i + 1}\t${label}\t${v.count}\n`;
+      const freeCol = v.freeCount
+        ? `${v.freeCount}${v.freeReasons.size ? ` (${[...v.freeReasons].join(",")})` : ""}`
+        : "";
+      text += `${i + 1}\t${label}\t${v.count}\t${freeCol}\n`;
     });
     navigator.clipboard.writeText(text).then(() => {
       const n = document.getElementById(notifyId);
@@ -134,17 +137,31 @@ export function StatsPage() {
       <div>
         {trainersToShow.map((t) => {
           const tp = present.filter((s) => s.tid === t.id);
-          const mc: Record<string, { count: number; isGuest: boolean; name: string }> = {};
+          const mc: Record<
+            string,
+            { count: number; isGuest: boolean; name: string; freeCount: number; freeReasons: Set<string> }
+          > = {};
           tp.forEach((s) => {
+            const isFreeSess = !!s.isFree;
             if (s.mid) {
               const m = getMember(db, s.mid);
               const key = s.mid;
-              if (!mc[key]) mc[key] = { count: 0, isGuest: false, name: m?.name || "?" };
+              if (!mc[key])
+                mc[key] = { count: 0, isGuest: false, name: m?.name || "?", freeCount: 0, freeReasons: new Set() };
               mc[key].count++;
+              if (isFreeSess) {
+                mc[key].freeCount++;
+                if (s.freeReason) mc[key].freeReasons.add(s.freeReason);
+              }
             } else {
               const key = "guest_" + (s.customName || "?");
-              if (!mc[key]) mc[key] = { count: 0, isGuest: true, name: s.customName || "?" };
+              if (!mc[key])
+                mc[key] = { count: 0, isGuest: true, name: s.customName || "?", freeCount: 0, freeReasons: new Set() };
               mc[key].count++;
+              if (isFreeSess) {
+                mc[key].freeCount++;
+                if (s.freeReason) mc[key].freeReasons.add(s.freeReason);
+              }
             }
           });
           const sorted = Object.entries(mc).sort((a, b) => b[1].count - a[1].count);
@@ -190,6 +207,14 @@ export function StatsPage() {
                                 <span className="text-[0.66rem] text-mu mr-1.5 font-medium">미등록 ·</span>
                               )}
                               {v.name}
+                              {v.freeCount > 0 && (
+                                <span
+                                  className="ml-1.5 inline-block px-1.5 py-0.5 rounded text-[0.62rem] font-bold bg-orange/15 text-orange align-middle"
+                                  title={v.freeReasons.size ? [...v.freeReasons].join(", ") : "무료 수업"}
+                                >
+                                  🎁{v.freeReasons.size === 1 ? ` ${[...v.freeReasons][0]}` : ""} {v.freeCount}
+                                </span>
+                              )}
                             </td>
                             <td className="px-3 py-2 text-[0.8rem] border-b border-bd">{v.count}회</td>
                           </tr>

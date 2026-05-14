@@ -44,6 +44,7 @@ export function MemberAutocomplete({
   initialCustomName,
   onChange,
   onRegisterNew,
+  preferOneOff = false,
 }: {
   db: DB;
   tid: TrainerId;
@@ -51,6 +52,7 @@ export function MemberAutocomplete({
   initialCustomName?: string | null;
   onChange: (sel: MemberSelection) => void;
   onRegisterNew: (name: string) => string;
+  preferOneOff?: boolean;
 }) {
   const initialName = initialCustomName
     ? initialCustomName
@@ -209,29 +211,59 @@ export function MemberAutocomplete({
           )}
           {q && !exactMatch && (
             <div className="border-t border-bd p-2 flex flex-col gap-1.5">
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  registerNew();
-                }}
-                className="w-full px-3 py-2 rounded-md bg-acc text-black font-bold text-[0.82rem] text-left border-none cursor-pointer"
-              >
-                ➕ &quot;{query.trim()}&quot; 새 회원 등록
-                <span className="block text-[0.68rem] opacity-70 mt-0.5 font-medium">
-                  담당 트레이너 자동 배정
-                </span>
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  addOneOff();
-                }}
-                className="w-full px-3 py-1.5 rounded-md bg-transparent text-mu text-[0.76rem] text-left border-none cursor-pointer hover:bg-sf2"
-              >
-                일회성으로만 추가 (회원 등록 X)
-              </button>
+              {preferOneOff ? (
+                <>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      addOneOff();
+                    }}
+                    className="w-full px-3 py-2 rounded-md bg-acc text-black font-bold text-[0.82rem] text-left border-none cursor-pointer"
+                  >
+                    ✨ &quot;{query.trim()}&quot; 일회성 추가
+                    <span className="block text-[0.68rem] opacity-70 mt-0.5 font-medium">
+                      회원 등록 X · 체험/이벤트 손님
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      registerNew();
+                    }}
+                    className="w-full px-3 py-1.5 rounded-md bg-transparent text-mu text-[0.76rem] text-left border-none cursor-pointer hover:bg-sf2"
+                  >
+                    ➕ 정식 회원으로 등록
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      registerNew();
+                    }}
+                    className="w-full px-3 py-2 rounded-md bg-acc text-black font-bold text-[0.82rem] text-left border-none cursor-pointer"
+                  >
+                    ➕ &quot;{query.trim()}&quot; 새 회원 등록
+                    <span className="block text-[0.68rem] opacity-70 mt-0.5 font-medium">
+                      담당 트레이너 자동 배정
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      addOneOff();
+                    }}
+                    className="w-full px-3 py-1.5 rounded-md bg-transparent text-mu text-[0.76rem] text-left border-none cursor-pointer hover:bg-sf2"
+                  >
+                    일회성으로만 추가 (회원 등록 X)
+                  </button>
+                </>
+              )}
             </div>
           )}
           {!q && !matches.length && (
