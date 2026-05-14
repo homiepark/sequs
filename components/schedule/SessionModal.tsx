@@ -262,6 +262,7 @@ export function SessionModal({
           initialCustomName={sel.customName}
           onChange={setSel}
           onRegisterNew={registerNew}
+          preferOneOff={isFree}
         />
       </Field>
 
