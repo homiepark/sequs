@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { DB } from "./types";
-import { emptyDB, normalizeDB } from "./types";
+import { emptyDB, fmtDateToISO, normalizeDB } from "./types";
 import {
   remoteHasArrayShape,
   subscribeDB,
@@ -155,7 +155,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = fmtDateToISO(new Date());
     let last: string | null = null;
     try {
       last = localStorage.getItem(LS_BACKUP_DATE);

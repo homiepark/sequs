@@ -9,6 +9,7 @@ import {
   DatabaseReference,
 } from "firebase/database";
 import type { DB } from "./types";
+import { fmtDateToISO } from "./types";
 
 const firebaseConfig = {
   apiKey: "AIzaSyChNw0VDTrTau5AJfEEgS323-xk7mAJKvs",
@@ -171,7 +172,7 @@ export function writeFullAsMaps(db: DB): Promise<void> {
 export function writeBackupSnapshot(data: DB): Promise<void> {
   try {
     const cleaned = JSON.parse(JSON.stringify(data)) as DB;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = fmtDateToISO(new Date());
     const snapRef = ref(getDB(), `ptcenter_backups/${today}`);
     return set(snapRef, { at: new Date().toISOString(), data: cleaned }).catch((err) => {
       console.warn("Firebase backup error:", err);

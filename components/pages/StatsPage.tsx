@@ -5,6 +5,7 @@ import {
   SALARY_CONFIGS,
   SALARY_EXCLUDED,
   TRAINERS,
+  fmtDateToISO,
   getMember,
   getSessionsForDate,
   getTrainer,
@@ -24,7 +25,7 @@ export function StatsPage() {
   const { present, free, absent, precan, daycan } = useMemo(() => {
     const prefix = `${yr}-${String(mo).padStart(2, "0")}`;
     const dim = new Date(yr, mo, 0).getDate();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = fmtDateToISO(new Date());
     const all: Session[] = [];
     for (let d = 1; d <= dim; d++) {
       const ds = `${prefix}-${String(d).padStart(2, "0")}`;
