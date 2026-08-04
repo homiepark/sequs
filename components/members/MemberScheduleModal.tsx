@@ -6,6 +6,7 @@ import {
   fmtDateToISO,
   getSessionsForDate,
   getTrainer,
+  memberSessionOrdinals,
   type Member,
   type Session,
 } from "@/lib/types";
@@ -16,6 +17,7 @@ interface Entry {
   sess: Session;
   status: string;
   color: string;
+  ord?: number;
 }
 
 function weekdayShort(ds: string): string {
@@ -61,6 +63,12 @@ export function MemberScheduleModal({
       const { label, color } = describeStatus(att, ds <= today);
       all.push({ date: ds, sess, status: label, color });
     }
+    const ordinals = member.countSessions
+      ? memberSessionOrdinals(db, member, all.length ? all[all.length - 1].date : today)
+      : {};
+    all.forEach((e) => {
+      e.ord = ordinals[`${e.date}_${e.sess.id}`];
+    });
     return {
       past: all.filter((e) => e.date < today).slice(-12).reverse(),
       future: all.filter((e) => e.date >= today).slice(0, 20),
@@ -154,7 +162,14 @@ function Row({ entry }: { entry: Entry }) {
             </span>
           )}
         </div>
-        <div className="text-[0.72rem] text-mu">{t?.name}</div>
+        <div className="text-[0.72rem] text-mu flex items-center gap-1.5">
+          {t?.name}
+          {entry.ord != null && (
+            <span className="inline-block px-1.5 py-0.5 rounded bg-black text-white font-bold text-[0.64rem]">
+              {entry.ord}회차
+            </span>
+          )}
+        </div>
       </div>
       <div className="text-[0.74rem] font-bold" style={{ color }}>
         {status}

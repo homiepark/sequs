@@ -304,7 +304,8 @@ function SalarySection({
           const whRate = cfg.withholdingRate ?? 0.033;
           const withholdingTax = cfg.deductWithholding ? Math.round(businessIncome * whRate) : 0;
           const businessAfterTax = cfg.deductWithholding ? businessIncome - withholdingTax : businessIncome;
-          const total = afterDeduction + businessAfterTax;
+          const serverFee = cfg.serverFee || 0;
+          const total = afterDeduction + businessAfterTax + serverFee;
 
           function setVolans(n: number) {
             mutate("볼란스 수 변경", (d) => {
@@ -335,6 +336,7 @@ function SalarySection({
             } else {
               lines.push(`세금계산서 발행\t${businessIncome}`);
             }
+            if (serverFee) lines.push(`서버비(가산·세금제외)\t${serverFee}`);
             lines.push(`총급여\t${total}`);
             navigator.clipboard.writeText(lines.join("\n"));
           }
@@ -417,6 +419,12 @@ function SalarySection({
                 )}
               </div>
 
+              {serverFee > 0 && (
+                <div className="flex items-center justify-between px-3 py-1.5 mb-2 text-[0.82rem]">
+                  <span className="text-mu">서버비 <span className="text-[0.7rem]">(세금 제외 · 가산)</span></span>
+                  <span className="font-bold text-tx">+ {won(serverFee)}</span>
+                </div>
+              )}
               <div className="bg-acc/10 border border-acc/40 rounded-lg px-3 py-3 flex items-center justify-between">
                 <span className="font-bold text-acc">총 급여</span>
                 <span className="font-bebas text-[1.6rem] tracking-wider text-acc">

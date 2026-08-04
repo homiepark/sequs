@@ -144,7 +144,9 @@ interface Member {
   id, name, phone, tid,     // 레거시 tid (첫 담당)
   tids?: TrainerId[],        // 멀티 트레이너 담당
   memo?: string,             // 회원 특이사항
-  memoLog?: MemberMemoEntry[]  // 회원 이슈 로그 (날짜별 누적)
+  memoLog?: MemberMemoEntry[],  // 회원 이슈 로그 (날짜별 누적)
+  countSessions?: boolean,   // 세션 회차 카운트 대상 (opt-in)
+  sessionStart?: number      // 앱 도입 전 누적 회차 (기본 0)
 }
 interface MemberMemoEntry { id, date, text, createdAt }
 
@@ -401,8 +403,22 @@ interface DB {
 - 부수: 오전 9시 이전 "오늘" 이 어제로 잡히던 문제 (오늘 하이라이트, 월간통계 컷오프, 백업 날짜 키 등)
 - 조치: 날짜 추출 용도를 전부 로컬 날짜 헬퍼 `fmtDateToISO()` 로 교체 (7개 파일). `StatsPage` 백업 파일명만 표시용이라 유지.
 
-### 9-B.2 향후 확인 필요 (미착수)
-- **고정수업 종료일(FixedEndDateModal)**: 핵심 endDate 필터는 정상이나, ① 종료일 기본값이 과거(지난 금요일)로 잘못 계산됨 ② "이번만 수정"으로 만든 개별 real 세션은 endDate 영향을 안 받아 종료일 이후에도 남음 — "안 사라짐" 체감의 원인.
+### 9-B.2 고정수업 종료일 수정 (FixedEndDateModal)
+- 종료일 **기본값을 오늘**로 정상화 (기존엔 과거 금요일로 계산돼 신뢰 안 감)
+- **종료일 지정 시**, 그 회원의 같은 요일·시간(:00/:30) 미래 개별 real 세션도 함께 삭제 → "이번만 수정"으로 개별화된 주가 있어도 종료일 이후 확실히 사라짐. att 도 같이 정리.
+
+### 9-B.3 급여: 서버비 (최서윤/t2)
+- `SalaryConfig.serverFee` 추가, t2 = 14,000원
+- **총급여에 가산** (세금계산과 무관 — 사업소득/원천세 계산엔 미포함). t2는 원래 세금계산서 발행이라 원천세 없음
+- 급여 카드에 "서버비 (세금 제외 · 가산)" 라인 + 엑셀 복사에 `서버비(가산·세금제외)` 항목
+
+### 9-B.4 회원 세션 회차 카운트 (opt-in)
+- 회원 수정 화면에서 **"🔢 세션 회차 카운트"** 체크 + **"시작 회차"**(앱 도입 전 누적) 입력
+- 카운트 규칙: **유료 진행분만** — 사캔·당캔·결석·🎁무료 전부 제외, 시간순 누적. 회차 = `sessionStart + 진행 순번`
+- 헬퍼: `memberSessionOrdinals(db, member, maxDate)` / `computeSessionCounts(db, maxDate)` (`lib/types.ts`)
+- 전달: `lib/sessionCount.tsx` 컨텍스트 (`SessionCountProvider`/`useSessionCounts`). SchedulePage가 현재 주 마지막 날까지 계산해 provide
+- 표시: 스케줄 카드에 검정 **`N회차`** 배지 + 회원 "예약 보기" 목록 각 행. countSessions 회원만.
+- 주의: 카드 배지는 컨텍스트 키 `${date}_${sess.id}` 로 조회 — 세션 id 규칙(실제 `s...`, 고정 `fx_{fid}_{date}`) 유지 필수
 
 ## 10. 배포 & 개발 워크플로우
 ### 10.1 명령어

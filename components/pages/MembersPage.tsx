@@ -275,6 +275,8 @@ function MemberModal({
   const [tids, setTids] = useState<TrainerId[]>(member ? memberTrainers(member) : []);
   const [memo, setMemo] = useState(member?.memo || "");
   const [memoLog, setMemoLog] = useState<MemberMemoEntry[]>(member?.memoLog || []);
+  const [countSessions, setCountSessions] = useState<boolean>(!!member?.countSessions);
+  const [sessionStart, setSessionStart] = useState<number>(member?.sessionStart ?? 0);
   const todayISO = fmtDateToISO(new Date());
   const [logDate, setLogDate] = useState(todayISO);
   const [logText, setLogText] = useState("");
@@ -328,6 +330,8 @@ function MemberModal({
           m.tids = tids;
           m.memo = memo.trim();
           m.memoLog = memoLog;
+          m.countSessions = countSessions;
+          m.sessionStart = countSessions ? sessionStart : 0;
         }
       });
     } else {
@@ -340,6 +344,8 @@ function MemberModal({
           tids,
           memo: memo.trim(),
           memoLog,
+          countSessions,
+          sessionStart: countSessions ? sessionStart : 0,
         });
       });
     }
@@ -415,6 +421,33 @@ function MemberModal({
             );
           })}
         </div>
+      </div>
+      <div className="mb-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={countSessions}
+            onChange={(e) => setCountSessions(e.target.checked)}
+            className="w-4 h-4 cursor-pointer"
+          />
+          <span className="text-[0.82rem] font-medium">
+            🔢 세션 회차 카운트
+            <span className="text-[0.7rem] text-mu ml-1">(스케줄 카드에 N회차 표시 · 캔슬/무료 제외)</span>
+          </span>
+        </label>
+        {countSessions && (
+          <div className="mt-2 ml-[26px] flex items-center gap-2 flex-wrap">
+            <label className="text-[0.74rem] text-mu">시작 회차 (앱 도입 전 누적)</label>
+            <input
+              type="number"
+              min={0}
+              value={sessionStart}
+              onChange={(e) => setSessionStart(Math.max(0, parseInt(e.target.value) || 0))}
+              className="w-16 bg-sf2 border border-bd text-tx px-2 py-1 rounded text-[0.84rem] text-center"
+            />
+            <span className="text-[0.72rem] text-mu">→ 다음 세션 {sessionStart + 1}회차부터</span>
+          </div>
+        )}
       </div>
       <div className="mb-3">
         <label className="block text-[0.71rem] text-mu mb-1 font-medium">
