@@ -350,6 +350,7 @@ interface DB {
 | 다중 클라이언트 last-write-wins 데이터 손실 | `71d3fd5` path-level update() + auto migration |
 | 차단 3-way 모달에서 :30 세션 미탐지 | `9f9670d` 시 단위 정규화 |
 | 수업 있는 시간 차단이 2단계 필요 (캔슬 → 차단) | `52c3831` ActionMenu 옵션 추가 + `342a809` directCancel 모드 |
+| KST 날짜 하루 밀림 (`toISOString().slice(0,10)` 가 UTC로 변환) | `af5278e` 전부 `fmtDateToISO()` (로컬 날짜) 로 교체 |
 
 ---
 
@@ -391,6 +392,18 @@ interface DB {
 
 ---
 
+## 9-B. 2026-08-04 세션 진행 요약
+전체 코드베이스 정독 + KST 날짜 버그 수정.
+
+### 9-B.1 KST 날짜 하루 밀림 버그 수정 (`af5278e`)
+- `toISOString().slice(0,10)` 은 UTC로 변환하므로 KST(UTC+9)에서 캘린더 날짜가 하루 전날로 밀림
+- **핵심 버그**: `MembersPage.uniqueDatesForMember` 가 고정수업 날짜를 하루 일찍 생성 → `getSessionsForDate` 요일 불일치 → 회원 카드의 이번달/누적 출석·마지막 방문에서 **고정수업 출석 누락**
+- 부수: 오전 9시 이전 "오늘" 이 어제로 잡히던 문제 (오늘 하이라이트, 월간통계 컷오프, 백업 날짜 키 등)
+- 조치: 날짜 추출 용도를 전부 로컬 날짜 헬퍼 `fmtDateToISO()` 로 교체 (7개 파일). `StatsPage` 백업 파일명만 표시용이라 유지.
+
+### 9-B.2 향후 확인 필요 (미착수)
+- **고정수업 종료일(FixedEndDateModal)**: 핵심 endDate 필터는 정상이나, ① 종료일 기본값이 과거(지난 금요일)로 잘못 계산됨 ② "이번만 수정"으로 만든 개별 real 세션은 endDate 영향을 안 받아 종료일 이후에도 남음 — "안 사라짐" 체감의 원인.
+
 ## 10. 배포 & 개발 워크플로우
 ### 10.1 명령어
 ```bash
@@ -404,10 +417,10 @@ pnpm start            # 프로덕션 로컬 실행
 
 ### 10.2 Git 정책
 - **main 브랜치 direct push 금지** (서버가 403 반환)
-- 개발은 `claude/rebuild-pt-center-app-s1w3S` 브랜치에서
-- 커밋 후 `git push origin main:claude/rebuild-pt-center-app-s1w3S --force` (이전 커밋은 이미 squash-merge 됐으므로 force 안전)
-- GitHub MCP 로 PR 생성 → squash merge
+- 개발 브랜치명은 **세션마다 지정됨** (task 프롬프트에서 확인). 예전: `claude/rebuild-pt-center-app-s1w3S`, 2026-08 세션: `claude/project-status-review-kiszef`
+- 지정된 feature 브랜치에 커밋 → `git push -u origin <branch>` → GitHub MCP 로 PR 생성 → squash merge
 - 머지 후 `git fetch && git reset --hard origin/main` 으로 로컬 동기화
+- 이미 머지된 PR 은 재사용 금지 — 후속 작업은 main 기준으로 브랜치 다시 만들어 새 PR
 
 ### 10.3 Vercel
 - main push 감지 → 자동 배포 (5~10분)
