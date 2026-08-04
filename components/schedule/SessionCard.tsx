@@ -1,10 +1,11 @@
 "use client";
 import { useStore } from "@/lib/store";
 import { useHighlight } from "@/lib/highlight";
-import { useSessionCounts } from "@/lib/sessionCount";
+import { useScheduleMeta } from "@/lib/sessionCount";
 import {
   getMember,
   getTrainer,
+  packageProgress,
   sessionSlotKey,
   type Session,
   type TrainerId,
@@ -25,10 +26,12 @@ export function SessionCard({
 }) {
   const { db, mutate } = useStore();
   const { highlightMid } = useHighlight();
-  const sessionCounts = useSessionCounts();
-  const ordinal = sessionCounts[`${ds}_${sess.id}`];
+  const meta = useScheduleMeta();
+  const ordinal = meta.ordinals[`${ds}_${sess.id}`];
+  const vip = sess.mid ? !!meta.members[sess.mid]?.vip : false;
   const t = getTrainer(tid)!;
   const mem = getMember(db, sess.mid);
+  const pkg = mem && ordinal != null ? packageProgress(mem, ordinal) : null;
   const ak = `${ds}_${sess.id}`;
   const st = db.att[ak] || null;
   const isPreCan = st === "precancel";
@@ -98,15 +101,23 @@ export function SessionCard({
             🎁{sess.freeReason && sess.freeReason.length <= 6 ? ` ${sess.freeReason}` : ""}
           </span>
         )}
-        {ordinal != null && (
-          <span
-            className="inline-block rounded px-1 font-black tracking-wider leading-none bg-black text-white whitespace-nowrap"
-            style={{ fontSize: `${tagSize}rem` }}
-            title={`${ordinal}회차`}
-          >
-            {ordinal}회차
-          </span>
-        )}
+        {ordinal != null && (() => {
+          const renewal = !!pkg && (pkg.isLast || pkg.isOver);
+          const bg = renewal ? "#ff4d4d" : vip ? "#e8b800" : "#000";
+          const label = renewal ? `${pkg!.index}/${pkg!.size}` : `${vip ? "⭐" : ""}${ordinal}회`;
+          const tip = renewal
+            ? `${ordinal}회차 · ${pkg!.size}회권 ${pkg!.index}/${pkg!.size}${pkg!.isOver ? " (초과·재등록)" : " (마지막·재등록)"}`
+            : `${ordinal}회차${vip ? " · VIP" : ""}`;
+          return (
+            <span
+              className="inline-block rounded px-1 font-black tracking-wider leading-none text-white whitespace-nowrap"
+              style={{ fontSize: `${tagSize}rem`, background: bg }}
+              title={tip}
+            >
+              {label}
+            </span>
+          );
+        })()}
         {sess.isFixed && (
           <span
             className={`${

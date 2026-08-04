@@ -7,6 +7,7 @@ import {
   getSessionsForDate,
   getTrainer,
   memberSessionOrdinals,
+  VIP_THRESHOLD,
   type Member,
   type Session,
 } from "@/lib/types";
@@ -35,7 +36,7 @@ export function MemberScheduleModal({
   const { db } = useStore();
   const { setHighlightMid } = useHighlight();
 
-  const { past, future } = useMemo(() => {
+  const { past, future, total, vip } = useMemo(() => {
     const today = fmtDateToISO(new Date());
     const dates = new Set<string>();
     db.sessions.filter((s) => s.mid === member.id).forEach((s) => dates.add(s.date));
@@ -69,9 +70,13 @@ export function MemberScheduleModal({
     all.forEach((e) => {
       e.ord = ordinals[`${e.date}_${e.sess.id}`];
     });
+    const doneOrds = all.filter((e) => e.date <= today && e.ord != null).map((e) => e.ord as number);
+    const tot = doneOrds.length ? Math.max(...doneOrds) : 0;
     return {
       past: all.filter((e) => e.date < today).slice(-12).reverse(),
       future: all.filter((e) => e.date >= today).slice(0, 20),
+      total: tot,
+      vip: !!member.countSessions && tot >= VIP_THRESHOLD,
     };
   }, [db, member.id]);
 
@@ -82,6 +87,21 @@ export function MemberScheduleModal({
 
   return (
     <Modal title={`${member.name} 예약`} wide onClose={onClose}>
+      {member.countSessions && (
+        <div className="mb-3 flex items-center gap-2 text-[0.8rem]">
+          <span className="text-mu">
+            🔢 누적 <span className="font-bold text-tx">{total}회</span>
+          </span>
+          {vip && (
+            <span
+              className="px-1.5 py-0.5 rounded text-[0.64rem] font-black leading-none"
+              style={{ background: "#e8b800", color: "#000" }}
+            >
+              ⭐VIP
+            </span>
+          )}
+        </div>
+      )}
       <div className="mb-3 flex items-center gap-2">
         <button
           onClick={showOnSchedule}

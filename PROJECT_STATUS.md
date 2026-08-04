@@ -146,7 +146,10 @@ interface Member {
   memo?: string,             // 회원 특이사항
   memoLog?: MemberMemoEntry[],  // 회원 이슈 로그 (날짜별 누적)
   countSessions?: boolean,   // 세션 회차 카운트 대상 (opt-in)
-  sessionStart?: number      // 앱 도입 전 누적 회차 (기본 0)
+  sessionStart?: number,     // (레거시 폴백) 앱 도입 전 누적 회차
+  sessionAnchor?: { date, time, number },  // "이 수업 = N회차" 기준점 (우선)
+  packageSize?: number,      // 현재 회원권 크기 (10 / 20)
+  packageStart?: number      // 현재 회원권 첫 회차 번호 (누적 회차 기준)
 }
 interface MemberMemoEntry { id, date, text, createdAt }
 
@@ -419,6 +422,26 @@ interface DB {
 - 전달: `lib/sessionCount.tsx` 컨텍스트 (`SessionCountProvider`/`useSessionCounts`). SchedulePage가 현재 주 마지막 날까지 계산해 provide
 - 표시: 스케줄 카드에 검정 **`N회차`** 배지 + 회원 "예약 보기" 목록 각 행. countSessions 회원만.
 - 주의: 카드 배지는 컨텍스트 키 `${date}_${sess.id}` 로 조회 — 세션 id 규칙(실제 `s...`, 고정 `fx_{fid}_{date}`) 유지 필수
+
+## 9-C. 회차 앵커 · 회원권 · VIP (2026-08-04 후속)
+회차 UX 개선 + 10/20회권 + VIP. **화면 복잡도 최소** 원칙: 카드엔 배지 1개, 상세는 넓은 곳.
+
+### 9-C.1 회차 = 앵커 방식
+- 회원수정의 추상적 "시작 회차" 대신, **수업 모달에서 "이 수업 = N회차"** 지정 → `member.sessionAnchor {date,time,number}`. 그 세션 순번을 찾아 오프셋 계산(`baseOffsetOf`), 앞뒤 자동. 앵커 없으면 `sessionStart` 폴백.
+- `lib/types.ts`: `countedSessionsOf` / `baseOffsetOf` / `memberSessionOrdinals`(앵커 반영) / `computeScheduleMeta(db,maxDate,today)` → `{ordinals, members:{mid:{total,vip}}}` / `packageProgress(member,ordinal)`
+- 컨텍스트 `lib/sessionCount.tsx` 값이 `ScheduleMeta` 로 확장(`useScheduleMeta`).
+
+### 9-C.2 회원권 (10/20회권)
+- `member.packageSize` + `packageStart`(누적 회차 기준). 수업 모달에서 "회원권 [10/20] · 이번 권 [P]" 입력 → `packageStart = N - P + 1` 로 저장.
+- 진행 = `ordinal - packageStart + 1`. 마지막(`==size`)/초과(`>size`) = 재등록 신호.
+
+### 9-C.3 VIP
+- 누적(오늘까지 진행) ≥ `VIP_THRESHOLD`(100) → `members[mid].vip`. 카운트 켜진 회원만 판정.
+
+### 9-C.4 표시 (복잡도 최소)
+- **스케줄 카드**: 배지 1개. 평소 `N회`(검정) · VIP `⭐N회`(골드 `#e8b800`) · 권 마지막/초과 `P/size`(빨강 `#ff4d4d`=재등록). (`SessionCard`)
+- **액션메뉴/예약보기/회원카드**: 풀표기 `N회차 · 20회권 4/20 · ⭐VIP`.
+- **회원 탭**: `⭐VIP만` 필터.
 
 ## 10. 배포 & 개발 워크플로우
 ### 10.1 명령어

@@ -22,7 +22,10 @@ export interface Member {
   memo?: string;
   memoLog?: MemberMemoEntry[];
   countSessions?: boolean; // 세션 회차 카운트 대상 (opt-in)
-  sessionStart?: number; // 앱 도입 전 누적 회차 (기본 0)
+  sessionStart?: number; // (레거시 폴백) 앱 도입 전 누적 회차
+  sessionAnchor?: { date: string; time: string; number: number }; // "이 수업 = N회차" 기준점
+  packageSize?: number; // 현재 회원권 크기 (10 / 20 …)
+  packageStart?: number; // 현재 회원권의 첫 회차 번호 (누적 회차 기준)
 }
 
 export function memberTrainers(m: Member): TrainerId[] {
@@ -307,15 +310,12 @@ export function getSessionsForDate(db: DB, ds: string): Session[] {
   return [...real, ...fixed];
 }
 
-// 회원 세션 회차 계산: 유료 진행분만 (사캔·당캔·결석·무료 제외) 을
-// 시간순으로 세어 sessionStart 를 기준점으로 회차 번호를 매긴다.
-// 반환 키는 `${date}_${sess.id}` → 해당 세션의 회차 번호.
-export function memberSessionOrdinals(
+// 회원의 유료 진행분(사캔·당캔·결석·무료 제외) 세션을 시간순으로 반환.
+function countedSessionsOf(
   db: DB,
   member: Member,
   maxDate: string
-): Record<string, number> {
-  const out: Record<string, number> = {};
+): { key: string; date: string; time: string }[] {
   const dates = new Set<string>();
   db.sessions
     .filter((s) => s.mid === member.id && s.date <= maxDate)
@@ -335,7 +335,7 @@ export function memberSessionOrdinals(
         dates.add(ds);
       }
     });
-  let n = member.sessionStart || 0;
+  const list: { key: string; date: string; time: string }[] = [];
   for (const ds of Array.from(dates).sort()) {
     const daySess = getSessionsForDate(db, ds)
       .filter((s) => s.mid === member.id)
@@ -344,21 +344,81 @@ export function memberSessionOrdinals(
       const st = db.att[`${ds}_${s.id}`];
       if (st === "precancel" || st === "daycancel" || st === "absent") continue;
       if (s.isFree) continue;
-      n += 1;
-      out[`${ds}_${s.id}`] = n;
+      list.push({ key: `${ds}_${s.id}`, date: ds, time: s.time });
     }
   }
+  return list;
+}
+
+// 회차 번호의 기준 오프셋. 앵커(이 수업 = N회차)가 있으면 그걸 기준으로,
+// 없으면 레거시 sessionStart 를 기준으로.
+function baseOffsetOf(member: Member, list: { date: string; time: string }[]): number {
+  const a = member.sessionAnchor;
+  if (a) {
+    let k = list.findIndex((x) => x.date === a.date && x.time === a.time);
+    if (k < 0) {
+      k = list.filter((x) => x.date < a.date || (x.date === a.date && x.time < a.time)).length;
+    }
+    return a.number - (k + 1);
+  }
+  return member.sessionStart || 0;
+}
+
+// 키 `${date}_${sess.id}` → 회차 번호.
+export function memberSessionOrdinals(
+  db: DB,
+  member: Member,
+  maxDate: string
+): Record<string, number> {
+  const list = countedSessionsOf(db, member, maxDate);
+  const base = baseOffsetOf(member, list);
+  const out: Record<string, number> = {};
+  list.forEach((x, i) => {
+    out[x.key] = base + i + 1;
+  });
   return out;
 }
 
-// countSessions 가 켜진 회원 전체의 회차 맵을 합쳐서 반환.
-export function computeSessionCounts(db: DB, maxDate: string): Record<string, number> {
-  const out: Record<string, number> = {};
+export const VIP_THRESHOLD = 100;
+
+export interface ScheduleMeta {
+  ordinals: Record<string, number>; // `${date}_${sess.id}` → 회차
+  members: Record<string, { total: number; vip: boolean }>; // mid → 누적/VIP
+}
+
+// countSessions 회원 전체의 회차 + 누적/VIP 를 한 번에 계산.
+export function computeScheduleMeta(db: DB, maxDate: string, today: string): ScheduleMeta {
+  const ordinals: Record<string, number> = {};
+  const members: Record<string, { total: number; vip: boolean }> = {};
   for (const m of db.members) {
     if (!m.countSessions) continue;
-    Object.assign(out, memberSessionOrdinals(db, m, maxDate));
+    const list = countedSessionsOf(db, m, maxDate);
+    const base = baseOffsetOf(m, list);
+    let total = 0;
+    list.forEach((x, i) => {
+      const ord = base + i + 1;
+      ordinals[x.key] = ord;
+      if (x.date <= today) total = ord; // 오늘까지 실제 진행한 누적
+    });
+    members[m.id] = { total, vip: total >= VIP_THRESHOLD };
   }
-  return out;
+  return { ordinals, members };
+}
+
+// 현재 회원권 진행: 이 회차가 몇 번째인지 / 크기 / 마지막·초과 여부.
+export function packageProgress(
+  member: Member,
+  ordinal: number
+): { size: number; index: number; isLast: boolean; isOver: boolean } | null {
+  if (!member.packageSize || !member.packageStart) return null;
+  const index = ordinal - member.packageStart + 1;
+  if (index < 1) return null;
+  return {
+    size: member.packageSize,
+    index,
+    isLast: index === member.packageSize,
+    isOver: index > member.packageSize,
+  };
 }
 
 export function getAttStatus(db: DB, sess: Session): AttStatus | "auto" {

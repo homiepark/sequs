@@ -7,6 +7,8 @@ import {
   fmtKo,
   getMember,
   getSessionsForDate,
+  memberSessionOrdinals,
+  packageProgress,
   recentMemberMemoLog,
   type Session,
   type TrainerId,
@@ -48,18 +50,25 @@ export function SessionModal({
   const [isFree, setIsFree] = useState<boolean>(!!existing?.isFree);
   const [freeReason, setFreeReason] = useState<string>(existing?.freeReason || "");
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
-  const [countSessions, setCountSessions] = useState<boolean>(
-    !!getMember(db, existing?.mid)?.countSessions
-  );
-  const [sessionStart, setSessionStart] = useState<number>(
-    getMember(db, existing?.mid)?.sessionStart ?? 0
-  );
+  const initMember = getMember(db, existing?.mid);
+  const [countSessions, setCountSessions] = useState<boolean>(!!initMember?.countSessions);
+  const [anchorNum, setAnchorNum] = useState<string>("");
+  const [pkgSize, setPkgSize] = useState<number>(initMember?.packageSize ?? 0);
+  const [pkgIndex, setPkgIndex] = useState<string>("");
 
-  // 선택된 등록 회원이 바뀌면 그 회원의 회차 설정을 불러온다
+  // 선택된 등록 회원이 바뀌면 그 회원의 회차/회원권 설정을 불러온다.
+  // "이 수업 = N회차" 는 이 세션의 현재 회차로 프리필.
   useEffect(() => {
     const m = sel.mid ? db.members.find((x) => x.id === sel.mid) : null;
     setCountSessions(!!m?.countSessions);
-    setSessionStart(m?.sessionStart ?? 0);
+    setPkgSize(m?.packageSize ?? 0);
+    let ord: number | undefined;
+    if (m && existing) {
+      ord = memberSessionOrdinals(db, m, date)[`${date}_${existing.id}`];
+    }
+    setAnchorNum(ord != null ? String(ord) : "");
+    const prog = m && ord != null ? packageProgress(m, ord) : null;
+    setPkgIndex(prog ? String(prog.index) : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel.mid]);
 
@@ -153,19 +162,25 @@ export function SessionModal({
       return alert("회원을 선택하거나 이름을 입력해주세요");
     }
 
-    // 등록 회원이면 세션 회차 설정(회원 단위)도 함께 반영
-    if (sel.mid) {
-      const m = db.members.find((x) => x.id === sel.mid);
-      const nextStart = countSessions ? sessionStart : 0;
-      if (m && (!!m.countSessions !== countSessions || (m.sessionStart ?? 0) !== nextStart)) {
-        mutate("세션 회차 설정", (d) => {
-          const target = d.members.find((x) => x.id === sel.mid);
-          if (target) {
-            target.countSessions = countSessions;
-            target.sessionStart = nextStart;
+    // 등록 회원이면 세션 회차/회원권 설정(회원 단위)도 함께 반영
+    if (sel.mid && (countSessions || !!getMember(db, sel.mid)?.countSessions)) {
+      const N = parseInt(anchorNum);
+      const P = parseInt(pkgIndex);
+      mutate("세션 회차/회원권 설정", (d) => {
+        const t = d.members.find((x) => x.id === sel.mid);
+        if (!t) return;
+        t.countSessions = countSessions;
+        if (countSessions) {
+          if (!isNaN(N)) t.sessionAnchor = { date, time: actualTime, number: N };
+          if (pkgSize > 0) {
+            t.packageSize = pkgSize;
+            if (!isNaN(N) && !isNaN(P)) t.packageStart = N - P + 1;
+          } else {
+            t.packageSize = undefined;
+            t.packageStart = undefined;
           }
-        });
-      }
+        }
+      });
     }
 
     if (isFixed && !existing) {
@@ -336,20 +351,53 @@ export function SessionModal({
             />
             <span className="text-[0.82rem]">
               🔢 세션 회차 카운트
-              <span className="text-[0.72rem] text-mu ml-1">(카드에 N회차 · 캔슬/무료 제외)</span>
+              <span className="text-[0.72rem] text-mu ml-1">(캔슬/무료 제외)</span>
             </span>
           </label>
           {countSessions && (
-            <div className="mt-2 ml-[22px] flex items-center gap-2 flex-wrap">
-              <label className="text-[0.74rem] text-mu">시작 회차</label>
-              <input
-                type="number"
-                min={0}
-                value={sessionStart}
-                onChange={(e) => setSessionStart(Math.max(0, parseInt(e.target.value) || 0))}
-                className="w-16 bg-sf2 border border-bd text-tx px-2 py-1 rounded text-[0.84rem] text-center"
-              />
-              <span className="text-[0.72rem] text-mu">→ 다음 {sessionStart + 1}회차</span>
+            <div className="mt-2 ml-[22px] flex flex-col gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="text-[0.74rem] text-mu w-12">이 수업</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={anchorNum}
+                  onChange={(e) => setAnchorNum(e.target.value)}
+                  placeholder="예: 13"
+                  className="w-16 bg-sf2 border border-bd text-tx px-2 py-1 rounded text-[0.84rem] text-center"
+                />
+                <span className="text-[0.74rem] text-mu">회차</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="text-[0.74rem] text-mu w-12">회원권</label>
+                <select
+                  value={pkgSize}
+                  onChange={(e) => setPkgSize(parseInt(e.target.value))}
+                  className="bg-sf2 border border-bd text-tx px-2 py-1 rounded text-[0.82rem]"
+                >
+                  <option value={0}>없음</option>
+                  <option value={10}>10회권</option>
+                  <option value={20}>20회권</option>
+                </select>
+                {pkgSize > 0 && (
+                  <>
+                    <span className="text-[0.74rem] text-mu">이번 권</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={pkgSize}
+                      value={pkgIndex}
+                      onChange={(e) => setPkgIndex(e.target.value)}
+                      placeholder="예: 4"
+                      className="w-14 bg-sf2 border border-bd text-tx px-2 py-1 rounded text-[0.84rem] text-center"
+                    />
+                    <span className="text-[0.74rem] text-mu">/{pkgSize}</span>
+                  </>
+                )}
+              </div>
+              <div className="text-[0.68rem] text-mu">
+                💡 이 수업 기준으로 앞뒤 회차가 자동 계산돼요.
+              </div>
             </div>
           )}
         </div>

@@ -4,12 +4,14 @@ import { useStore } from "@/lib/store";
 import {
   AVATAR_COLORS,
   TRAINERS,
+  computeScheduleMeta,
   fmtDateToISO,
   fmtKo,
   getSessionsForDate,
   getTrainer,
   memberHasTrainer,
   memberTrainers,
+  packageProgress,
   type DB,
   type Member,
   type MemberMemoEntry,
@@ -51,15 +53,19 @@ export function MembersPage() {
   const [adding, setAdding] = useState(false);
   const [bulkAdding, setBulkAdding] = useState(false);
   const [scheduleFor, setScheduleFor] = useState<Member | null>(null);
+  const [vipOnly, setVipOnly] = useState(false);
 
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const today = fmtDateToISO(now);
+  const meta = useMemo(() => computeScheduleMeta(db, today, today), [db, today]);
 
   const filtered = useMemo(() => {
     let list = db.members.filter((m) => m.name.toLowerCase().includes(q.toLowerCase()));
     if (trF !== "all") list = list.filter((m) => memberHasTrainer(m, trF as TrainerId));
+    if (vipOnly) list = list.filter((m) => meta.members[m.id]?.vip);
     return [...list].sort((a, b) => a.name.localeCompare(b.name, "ko"));
-  }, [db.members, q, trF]);
+  }, [db.members, q, trF, vipOnly, meta]);
 
   function cntAtt(mid: string, prefix: string | null) {
     let total = 0;
@@ -130,6 +136,16 @@ export function MembersPage() {
         </button>
       </div>
       <TrainerTabs value={trF} onChange={setTrF} />
+      <div className="flex items-center gap-2 mb-3 -mt-1">
+        <button
+          onClick={() => setVipOnly((v) => !v)}
+          className={`px-3 py-1.5 rounded-lg text-[0.76rem] font-bold border-[1.5px] ${
+            vipOnly ? "bg-[#e8b800] text-black border-[#e8b800]" : "bg-sf2 text-mu border-bd hover:text-acc hover:border-acc"
+          }`}
+        >
+          ⭐ VIP만 ({Object.values(meta.members).filter((x) => x.vip).length})
+        </button>
+      </div>
       {!filtered.length ? (
         <div className="text-center py-12 text-mu">회원이 없습니다</div>
       ) : (
@@ -149,7 +165,17 @@ export function MembersPage() {
                     {m.name[0]}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-[0.87rem]">{m.name}</div>
+                    <div className="font-bold text-[0.87rem] flex items-center gap-1.5">
+                      {m.name}
+                      {meta.members[m.id]?.vip && (
+                        <span
+                          className="px-1.5 py-0.5 rounded text-[0.58rem] font-black leading-none"
+                          style={{ background: "#e8b800", color: "#000" }}
+                        >
+                          ⭐VIP
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[0.69rem] text-mu mt-0.5 flex flex-wrap gap-1 items-center">
                       {tids.length ? (
                         tids.map((id) => {
@@ -186,6 +212,25 @@ export function MembersPage() {
                     <div className="text-[0.6rem] text-mu mt-0.5">마지막 방문</div>
                   </div>
                 </div>
+                {(() => {
+                  const info = meta.members[m.id];
+                  if (!info) return null;
+                  const pkg = packageProgress(m, info.total);
+                  return (
+                    <div className="mt-2 text-[0.72rem] text-mu">
+                      🔢 누적 <span className="font-bold text-tx">{info.total}회</span>
+                      {pkg && (
+                        <>
+                          {" · "}
+                          {pkg.size}회권{" "}
+                          <span className={pkg.isLast || pkg.isOver ? "font-bold text-red" : "font-bold text-tx"}>
+                            {pkg.index}/{pkg.size}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
                 {m.memo?.trim() && (
                   <div className="mt-2 px-2 py-1.5 bg-[rgba(232,255,71,0.06)] border border-acc/30 rounded-md text-[0.72rem] text-tx whitespace-pre-wrap leading-relaxed">
                     💬 {m.memo}
@@ -276,7 +321,7 @@ function MemberModal({
   const [memo, setMemo] = useState(member?.memo || "");
   const [memoLog, setMemoLog] = useState<MemberMemoEntry[]>(member?.memoLog || []);
   const [countSessions, setCountSessions] = useState<boolean>(!!member?.countSessions);
-  const [sessionStart, setSessionStart] = useState<number>(member?.sessionStart ?? 0);
+  const sessionStart = member?.sessionStart ?? 0; // 레거시 폴백 (회차는 스케줄 앵커로 지정)
   const todayISO = fmtDateToISO(new Date());
   const [logDate, setLogDate] = useState(todayISO);
   const [logText, setLogText] = useState("");
@@ -436,16 +481,8 @@ function MemberModal({
           </span>
         </label>
         {countSessions && (
-          <div className="mt-2 ml-[26px] flex items-center gap-2 flex-wrap">
-            <label className="text-[0.74rem] text-mu">시작 회차 (앱 도입 전 누적)</label>
-            <input
-              type="number"
-              min={0}
-              value={sessionStart}
-              onChange={(e) => setSessionStart(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-16 bg-sf2 border border-bd text-tx px-2 py-1 rounded text-[0.84rem] text-center"
-            />
-            <span className="text-[0.72rem] text-mu">→ 다음 세션 {sessionStart + 1}회차부터</span>
+          <div className="mt-2 ml-[26px] text-[0.72rem] text-mu leading-relaxed">
+            💡 정확한 회차·회원권은 <b className="text-tx">스케줄에서 해당 수업을 눌러</b> &ldquo;이 수업 = N회차&rdquo;로 지정하세요.
           </div>
         )}
       </div>
