@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
+import { fmtDateToISO } from "@/lib/types";
 import { Modal } from "../ui/Modal";
 
 export function FixedEndDateModal({
@@ -18,7 +19,7 @@ export function FixedEndDateModal({
   const today = new Date();
   const lastSat = new Date(today);
   lastSat.setDate(today.getDate() - ((today.getDay() + 1) % 7) - 1);
-  const defaultEnd = currentEnd || lastSat.toISOString().slice(0, 10);
+  const defaultEnd = currentEnd || fmtDateToISO(lastSat);
   const [date, setDate] = useState(defaultEnd);
 
   function save() {

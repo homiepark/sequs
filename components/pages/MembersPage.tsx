@@ -4,6 +4,7 @@ import { useStore } from "@/lib/store";
 import {
   AVATAR_COLORS,
   TRAINERS,
+  fmtDateToISO,
   fmtKo,
   getSessionsForDate,
   getTrainer,
@@ -23,7 +24,7 @@ function uniqueDatesForMember(db: DB, mid: string): string[] {
   const dates = new Set<string>();
   db.sessions.filter((s) => s.mid === mid).forEach((s) => dates.add(s.date));
   // For fixed schedules: produce dates from startDate up to today
-  const today = new Date().toISOString().slice(0, 10);
+  const today = fmtDateToISO(new Date());
   db.fixedSchedules
     .filter((f) => f.mid === mid)
     .forEach((f) => {
@@ -34,7 +35,7 @@ function uniqueDatesForMember(db: DB, mid: string): string[] {
       for (let x = new Date(s); x <= e; x.setDate(x.getDate() + 1)) {
         const dow = x.getDay() === 0 ? 7 : x.getDay();
         if (dow !== f.dayOfWeek) continue;
-        const ds = x.toISOString().slice(0, 10);
+        const ds = fmtDateToISO(x);
         if (f.skippedDates?.includes(ds)) continue;
         dates.add(ds);
       }
@@ -62,7 +63,7 @@ export function MembersPage() {
 
   function cntAtt(mid: string, prefix: string | null) {
     let total = 0;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = fmtDateToISO(new Date());
     const range = prefix
       ? (() => {
           const [yy, mm] = prefix.split("-").map(Number);
@@ -87,7 +88,7 @@ export function MembersPage() {
   }
 
   function lastVisit(mid: string) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = fmtDateToISO(new Date());
     const dates = uniqueDatesForMember(db, mid)
       .filter((ds) => ds <= today)
       .sort()
@@ -274,7 +275,7 @@ function MemberModal({
   const [tids, setTids] = useState<TrainerId[]>(member ? memberTrainers(member) : []);
   const [memo, setMemo] = useState(member?.memo || "");
   const [memoLog, setMemoLog] = useState<MemberMemoEntry[]>(member?.memoLog || []);
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = fmtDateToISO(new Date());
   const [logDate, setLogDate] = useState(todayISO);
   const [logText, setLogText] = useState("");
 

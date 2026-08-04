@@ -34,7 +34,7 @@ export function MemberScheduleModal({
   const { setHighlightMid } = useHighlight();
 
   const { past, future } = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = fmtDateToISO(new Date());
     const dates = new Set<string>();
     db.sessions.filter((s) => s.mid === member.id).forEach((s) => dates.add(s.date));
     db.fixedSchedules
@@ -176,5 +176,5 @@ function describeStatus(att: string | undefined, isPastOrToday: boolean): { labe
 function addMonths(ds: string, months: number): string {
   const d = new Date(ds + "T00:00:00");
   d.setMonth(d.getMonth() + months);
-  return d.toISOString().slice(0, 10);
+  return fmtDateToISO(d);
 }

@@ -29,7 +29,7 @@ import { MemberSearchModal } from "../members/MemberSearchModal";
 import { useGridGestures } from "@/lib/useGridGestures";
 import { useContainerWidth } from "@/lib/useContainerWidth";
 
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = fmtDateToISO(new Date());
 
 type ViewMode = "single" | "dayAll" | "weekAll";
 
