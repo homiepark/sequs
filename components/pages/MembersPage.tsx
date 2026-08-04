@@ -11,7 +11,6 @@ import {
   getTrainer,
   memberHasTrainer,
   memberTrainers,
-  packageProgress,
   type DB,
   type Member,
   type MemberMemoEntry,
@@ -215,13 +214,18 @@ export function MembersPage() {
                 {(() => {
                   const info = meta.members[m.id];
                   if (!info) return null;
-                  const pkg = packageProgress(m, info.total);
+                  const pkg = info.pkg;
+                  if (info.total == null && !pkg) return null;
                   return (
                     <div className="mt-2 text-[0.72rem] text-mu">
-                      🔢 누적 <span className="font-bold text-tx">{info.total}회</span>
+                      {info.total != null && (
+                        <>
+                          🔢 누적 <span className="font-bold text-tx">{info.total}회</span>
+                        </>
+                      )}
                       {pkg && (
                         <>
-                          {" · "}
+                          {info.total != null ? " · " : ""}
                           {pkg.size}회권{" "}
                           <span className={pkg.isLast || pkg.isOver ? "font-bold text-red" : "font-bold text-tx"}>
                             {pkg.index}/{pkg.size}
@@ -321,6 +325,7 @@ function MemberModal({
   const [memo, setMemo] = useState(member?.memo || "");
   const [memoLog, setMemoLog] = useState<MemberMemoEntry[]>(member?.memoLog || []);
   const [countSessions, setCountSessions] = useState<boolean>(!!member?.countSessions);
+  const [vip, setVip] = useState<boolean>(!!member?.vip);
   const sessionStart = member?.sessionStart ?? 0; // 레거시 폴백 (회차는 스케줄 앵커로 지정)
   const todayISO = fmtDateToISO(new Date());
   const [logDate, setLogDate] = useState(todayISO);
@@ -377,6 +382,7 @@ function MemberModal({
           m.memoLog = memoLog;
           m.countSessions = countSessions;
           m.sessionStart = countSessions ? sessionStart : 0;
+          m.vip = countSessions ? vip : false;
         }
       });
     } else {
@@ -391,6 +397,7 @@ function MemberModal({
           memoLog,
           countSessions,
           sessionStart: countSessions ? sessionStart : 0,
+          vip: countSessions ? vip : false,
         });
       });
     }
@@ -481,8 +488,21 @@ function MemberModal({
           </span>
         </label>
         {countSessions && (
-          <div className="mt-2 ml-[26px] text-[0.72rem] text-mu leading-relaxed">
-            💡 정확한 회차·회원권은 <b className="text-tx">스케줄에서 해당 수업을 눌러</b> &ldquo;이 수업 = N회차&rdquo;로 지정하세요.
+          <div className="mt-2 ml-[26px] flex flex-col gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={vip}
+                onChange={(e) => setVip(e.target.checked)}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <span className="text-[0.78rem]">
+                ⭐ VIP <span className="text-[0.7rem] text-mu">(수동 지정 · 누적 100회↑ 자동)</span>
+              </span>
+            </label>
+            <div className="text-[0.72rem] text-mu leading-relaxed">
+              💡 회차·회원권은 <b className="text-tx">스케줄에서 해당 수업을 눌러</b> 지정하세요. 누적을 몰라도 &ldquo;20회권 중 4번째&rdquo;만 넣어도 됩니다.
+            </div>
           </div>
         )}
       </div>

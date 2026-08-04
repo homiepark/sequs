@@ -147,9 +147,9 @@ interface Member {
   memoLog?: MemberMemoEntry[],  // 회원 이슈 로그 (날짜별 누적)
   countSessions?: boolean,   // 세션 회차 카운트 대상 (opt-in)
   sessionStart?: number,     // (레거시 폴백) 앱 도입 전 누적 회차
-  sessionAnchor?: { date, time, number },  // "이 수업 = N회차" 기준점 (우선)
-  packageSize?: number,      // 현재 회원권 크기 (10 / 20)
-  packageStart?: number      // 현재 회원권 첫 회차 번호 (누적 회차 기준)
+  sessionAnchor?: { date, time, number },  // "이 수업 = N회차" 기준 (누적)
+  packageAnchor?: { date, time, index, size },  // "이 수업 = size회권 중 index번째" (누적과 독립)
+  vip?: boolean              // 수동 VIP (누적 100회↑ 는 자동)
 }
 interface MemberMemoEntry { id, date, text, createdAt }
 
@@ -431,12 +431,15 @@ interface DB {
 - `lib/types.ts`: `countedSessionsOf` / `baseOffsetOf` / `memberSessionOrdinals`(앵커 반영) / `computeScheduleMeta(db,maxDate,today)` → `{ordinals, members:{mid:{total,vip}}}` / `packageProgress(member,ordinal)`
 - 컨텍스트 `lib/sessionCount.tsx` 값이 `ScheduleMeta` 로 확장(`useScheduleMeta`).
 
-### 9-C.2 회원권 (10/20회권)
-- `member.packageSize` + `packageStart`(누적 회차 기준). 수업 모달에서 "회원권 [10/20] · 이번 권 [P]" 입력 → `packageStart = N - P + 1` 로 저장.
-- 진행 = `ordinal - packageStart + 1`. 마지막(`==size`)/초과(`>size`) = 재등록 신호.
+### 9-C.2 회원권 (10/20회권) — 누적과 독립
+- `member.packageAnchor {date,time,index,size}` = "이 수업 = size회권 중 index번째". **누적 회차를 몰라도** 이것만으로 진행 추적 (VIP 등 누적 미추적 회원 대응).
+- `memberPackagePositions(db,member,maxDate)` 가 counted-list 상대 위치로 각 세션의 `{index,size,isLast,isOver}` 계산. index<1(지난 권) 은 숨김. 마지막/초과 = 재등록 신호.
+- 회차(`sessionAnchor`)와 회원권(`packageAnchor`)은 **완전히 독립** — 둘 중 하나만 넣어도 됨.
 
-### 9-C.3 VIP
-- 누적(오늘까지 진행) ≥ `VIP_THRESHOLD`(100) → `members[mid].vip`. 카운트 켜진 회원만 판정.
+### 9-C.3 VIP (자동 + 수동)
+- 자동: 회차 추적 회원의 누적(오늘까지) ≥ `VIP_THRESHOLD`(100).
+- 수동: `member.vip` (누적 안 세는 VIP용). 회원 수정/수업 모달에 ⭐VIP 체크박스.
+- effective vip = 수동 `||` 자동. `members[mid].vip`.
 
 ### 9-C.4 표시 (복잡도 최소)
 - **스케줄 카드**: 배지 1개. 평소 `N회`(검정) · VIP `⭐N회`(골드 `#e8b800`) · 권 마지막/초과 `P/size`(빨강 `#ff4d4d`=재등록). (`SessionCard`)

@@ -5,7 +5,6 @@ import { useScheduleMeta } from "@/lib/sessionCount";
 import {
   getMember,
   getTrainer,
-  packageProgress,
   sessionSlotKey,
   type Session,
   type TrainerId,
@@ -27,11 +26,12 @@ export function SessionCard({
   const { db, mutate } = useStore();
   const { highlightMid } = useHighlight();
   const meta = useScheduleMeta();
-  const ordinal = meta.ordinals[`${ds}_${sess.id}`];
+  const skey = `${ds}_${sess.id}`;
+  const ordinal = meta.ordinals[skey];
+  const pkg = meta.packages[skey];
   const vip = sess.mid ? !!meta.members[sess.mid]?.vip : false;
   const t = getTrainer(tid)!;
   const mem = getMember(db, sess.mid);
-  const pkg = mem && ordinal != null ? packageProgress(mem, ordinal) : null;
   const ak = `${ds}_${sess.id}`;
   const st = db.att[ak] || null;
   const isPreCan = st === "precancel";
@@ -101,13 +101,28 @@ export function SessionCard({
             🎁{sess.freeReason && sess.freeReason.length <= 6 ? ` ${sess.freeReason}` : ""}
           </span>
         )}
-        {ordinal != null && (() => {
+        {(ordinal != null || pkg || vip) && (() => {
           const renewal = !!pkg && (pkg.isLast || pkg.isOver);
-          const bg = renewal ? "#ff4d4d" : vip ? "#e8b800" : "#000";
-          const label = renewal ? `${pkg!.index}/${pkg!.size}` : `${vip ? "⭐" : ""}${ordinal}회`;
-          const tip = renewal
-            ? `${ordinal}회차 · ${pkg!.size}회권 ${pkg!.index}/${pkg!.size}${pkg!.isOver ? " (초과·재등록)" : " (마지막·재등록)"}`
-            : `${ordinal}회차${vip ? " · VIP" : ""}`;
+          let bg: string;
+          let label: string;
+          let tip: string;
+          if (renewal) {
+            bg = "#ff4d4d";
+            label = `${pkg!.index}/${pkg!.size}`;
+            tip = `${pkg!.size}회권 ${pkg!.index}/${pkg!.size}${pkg!.isOver ? " (초과·재등록)" : " (마지막·재등록)"}`;
+          } else if (ordinal != null) {
+            bg = vip ? "#e8b800" : "#000";
+            label = `${vip ? "⭐" : ""}${ordinal}회`;
+            tip = `${ordinal}회차${vip ? " · VIP" : ""}`;
+          } else if (pkg) {
+            bg = vip ? "#e8b800" : "#000";
+            label = `${vip ? "⭐" : ""}${pkg.index}/${pkg.size}`;
+            tip = `${pkg.size}회권 ${pkg.index}/${pkg.size}${vip ? " · VIP" : ""}`;
+          } else {
+            bg = "#e8b800";
+            label = "⭐";
+            tip = "VIP";
+          }
           return (
             <span
               className="inline-block rounded px-1 font-black tracking-wider leading-none text-white whitespace-nowrap"

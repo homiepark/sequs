@@ -21,11 +21,11 @@ export interface Member {
   tids?: TrainerId[];
   memo?: string;
   memoLog?: MemberMemoEntry[];
-  countSessions?: boolean; // 세션 회차 카운트 대상 (opt-in)
+  countSessions?: boolean; // 세션 회차/회원권 관리 대상 (opt-in)
   sessionStart?: number; // (레거시 폴백) 앱 도입 전 누적 회차
-  sessionAnchor?: { date: string; time: string; number: number }; // "이 수업 = N회차" 기준점
-  packageSize?: number; // 현재 회원권 크기 (10 / 20 …)
-  packageStart?: number; // 현재 회원권의 첫 회차 번호 (누적 회차 기준)
+  sessionAnchor?: { date: string; time: string; number: number }; // "이 수업 = N회차" 기준 (누적)
+  packageAnchor?: { date: string; time: string; index: number; size: number }; // "이 수업 = size회권 중 index번째" (누적과 독립)
+  vip?: boolean; // 수동 VIP 지정 (누적 100회↑ 는 자동)
 }
 
 export function memberTrainers(m: Member): TrainerId[] {
@@ -364,12 +364,30 @@ function baseOffsetOf(member: Member, list: { date: string; time: string }[]): n
   return member.sessionStart || 0;
 }
 
-// 키 `${date}_${sess.id}` → 회차 번호.
+export interface PkgPos {
+  index: number;
+  size: number;
+  isLast: boolean;
+  isOver: boolean;
+}
+
+// 앵커(특정 수업)의 counted-list 내 위치를 찾는다. 없으면 그 날짜/시간 이전 개수로.
+function anchorIndex(
+  list: { date: string; time: string }[],
+  a: { date: string; time: string }
+): number {
+  const k = list.findIndex((x) => x.date === a.date && x.time === a.time);
+  if (k >= 0) return k;
+  return list.filter((x) => x.date < a.date || (x.date === a.date && x.time < a.time)).length;
+}
+
+// 키 `${date}_${sess.id}` → 회차 번호. 누적 기준(anchor/sessionStart)이 있어야 계산.
 export function memberSessionOrdinals(
   db: DB,
   member: Member,
   maxDate: string
 ): Record<string, number> {
+  if (!member.sessionAnchor && !member.sessionStart) return {};
   const list = countedSessionsOf(db, member, maxDate);
   const base = baseOffsetOf(member, list);
   const out: Record<string, number> = {};
@@ -379,46 +397,72 @@ export function memberSessionOrdinals(
   return out;
 }
 
+// 키 → 현재 회원권 내 위치. packageAnchor("이 수업 = size회권 중 index번째") 기준.
+// 누적 회차와 완전히 독립 — 누적을 몰라도 회원권 진행만 추적 가능.
+export function memberPackagePositions(
+  db: DB,
+  member: Member,
+  maxDate: string
+): Record<string, PkgPos> {
+  const a = member.packageAnchor;
+  if (!a) return {};
+  const list = countedSessionsOf(db, member, maxDate);
+  const k = anchorIndex(list, a);
+  const out: Record<string, PkgPos> = {};
+  list.forEach((x, i) => {
+    const index = a.index + (i - k);
+    if (index < 1) return; // 지난 권은 표시 안 함
+    out[x.key] = { index, size: a.size, isLast: index === a.size, isOver: index > a.size };
+  });
+  return out;
+}
+
 export const VIP_THRESHOLD = 100;
 
 export interface ScheduleMeta {
-  ordinals: Record<string, number>; // `${date}_${sess.id}` → 회차
-  members: Record<string, { total: number; vip: boolean }>; // mid → 누적/VIP
+  ordinals: Record<string, number>; // key → 회차 (회차 추적 회원만)
+  packages: Record<string, PkgPos>; // key → 회원권 위치 (packageAnchor 회원만)
+  members: Record<string, { total?: number; vip: boolean; pkg?: PkgPos }>; // mid → 오늘까지 상태
 }
 
-// countSessions 회원 전체의 회차 + 누적/VIP 를 한 번에 계산.
+// countSessions 회원 전체의 회차/회원권/VIP 를 한 번에 계산.
 export function computeScheduleMeta(db: DB, maxDate: string, today: string): ScheduleMeta {
   const ordinals: Record<string, number> = {};
-  const members: Record<string, { total: number; vip: boolean }> = {};
+  const packages: Record<string, PkgPos> = {};
+  const members: Record<string, { total?: number; vip: boolean; pkg?: PkgPos }> = {};
   for (const m of db.members) {
     if (!m.countSessions) continue;
     const list = countedSessionsOf(db, m, maxDate);
+    const trackOrd = !!(m.sessionAnchor || m.sessionStart);
     const base = baseOffsetOf(m, list);
-    let total = 0;
+    const pkgA = m.packageAnchor;
+    const pkgK = pkgA ? anchorIndex(list, pkgA) : 0;
+    let total: number | undefined = trackOrd ? 0 : undefined;
+    let lastPkg: PkgPos | undefined;
     list.forEach((x, i) => {
-      const ord = base + i + 1;
-      ordinals[x.key] = ord;
-      if (x.date <= today) total = ord; // 오늘까지 실제 진행한 누적
+      if (trackOrd) {
+        const ord = base + i + 1;
+        ordinals[x.key] = ord;
+        if (x.date <= today) total = ord;
+      }
+      if (pkgA) {
+        const index = pkgA.index + (i - pkgK);
+        if (index >= 1) {
+          const p: PkgPos = {
+            index,
+            size: pkgA.size,
+            isLast: index === pkgA.size,
+            isOver: index > pkgA.size,
+          };
+          packages[x.key] = p;
+          if (x.date <= today) lastPkg = p;
+        }
+      }
     });
-    members[m.id] = { total, vip: total >= VIP_THRESHOLD };
+    const autoVip = trackOrd && (total ?? 0) >= VIP_THRESHOLD;
+    members[m.id] = { total, vip: !!m.vip || autoVip, pkg: lastPkg };
   }
-  return { ordinals, members };
-}
-
-// 현재 회원권 진행: 이 회차가 몇 번째인지 / 크기 / 마지막·초과 여부.
-export function packageProgress(
-  member: Member,
-  ordinal: number
-): { size: number; index: number; isLast: boolean; isOver: boolean } | null {
-  if (!member.packageSize || !member.packageStart) return null;
-  const index = ordinal - member.packageStart + 1;
-  if (index < 1) return null;
-  return {
-    size: member.packageSize,
-    index,
-    isLast: index === member.packageSize,
-    isOver: index > member.packageSize,
-  };
+  return { ordinals, packages, members };
 }
 
 export function getAttStatus(db: DB, sess: Session): AttStatus | "auto" {

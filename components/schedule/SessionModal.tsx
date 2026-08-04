@@ -7,8 +7,8 @@ import {
   fmtKo,
   getMember,
   getSessionsForDate,
+  memberPackagePositions,
   memberSessionOrdinals,
-  packageProgress,
   recentMemberMemoLog,
   type Session,
   type TrainerId,
@@ -53,22 +53,25 @@ export function SessionModal({
   const initMember = getMember(db, existing?.mid);
   const [countSessions, setCountSessions] = useState<boolean>(!!initMember?.countSessions);
   const [anchorNum, setAnchorNum] = useState<string>("");
-  const [pkgSize, setPkgSize] = useState<number>(initMember?.packageSize ?? 0);
+  const [pkgSize, setPkgSize] = useState<number>(initMember?.packageAnchor?.size ?? 0);
   const [pkgIndex, setPkgIndex] = useState<string>("");
+  const [vip, setVip] = useState<boolean>(!!initMember?.vip);
 
-  // 선택된 등록 회원이 바뀌면 그 회원의 회차/회원권 설정을 불러온다.
-  // "이 수업 = N회차" 는 이 세션의 현재 회차로 프리필.
+  // 선택된 등록 회원이 바뀌면 그 회원의 회차/회원권/VIP 설정을 불러온다.
+  // "이 수업" 값은 이 세션의 현재 회차/권 위치로 프리필 (없으면 비움).
   useEffect(() => {
     const m = sel.mid ? db.members.find((x) => x.id === sel.mid) : null;
     setCountSessions(!!m?.countSessions);
-    setPkgSize(m?.packageSize ?? 0);
+    setVip(!!m?.vip);
+    setPkgSize(m?.packageAnchor?.size ?? 0);
     let ord: number | undefined;
+    let pidx: number | undefined;
     if (m && existing) {
       ord = memberSessionOrdinals(db, m, date)[`${date}_${existing.id}`];
+      pidx = memberPackagePositions(db, m, date)[`${date}_${existing.id}`]?.index;
     }
     setAnchorNum(ord != null ? String(ord) : "");
-    const prog = m && ord != null ? packageProgress(m, ord) : null;
-    setPkgIndex(prog ? String(prog.index) : "");
+    setPkgIndex(pidx != null ? String(pidx) : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel.mid]);
 
@@ -162,7 +165,7 @@ export function SessionModal({
       return alert("회원을 선택하거나 이름을 입력해주세요");
     }
 
-    // 등록 회원이면 세션 회차/회원권 설정(회원 단위)도 함께 반영
+    // 등록 회원이면 세션 회차/회원권/VIP 설정(회원 단위)도 함께 반영
     if (sel.mid && (countSessions || !!getMember(db, sel.mid)?.countSessions)) {
       const N = parseInt(anchorNum);
       const P = parseInt(pkgIndex);
@@ -172,13 +175,12 @@ export function SessionModal({
         t.countSessions = countSessions;
         if (countSessions) {
           if (!isNaN(N)) t.sessionAnchor = { date, time: actualTime, number: N };
-          if (pkgSize > 0) {
-            t.packageSize = pkgSize;
-            if (!isNaN(N) && !isNaN(P)) t.packageStart = N - P + 1;
-          } else {
-            t.packageSize = undefined;
-            t.packageStart = undefined;
+          if (pkgSize > 0 && !isNaN(P)) {
+            t.packageAnchor = { date, time: actualTime, index: P, size: pkgSize };
+          } else if (pkgSize === 0) {
+            t.packageAnchor = undefined;
           }
+          t.vip = vip;
         }
       });
     }
@@ -366,7 +368,7 @@ export function SessionModal({
                   placeholder="예: 13"
                   className="w-16 bg-sf2 border border-bd text-tx px-2 py-1 rounded text-[0.84rem] text-center"
                 />
-                <span className="text-[0.74rem] text-mu">회차</span>
+                <span className="text-[0.74rem] text-mu">회차 <span className="opacity-70">(모르면 비워두기)</span></span>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <label className="text-[0.74rem] text-mu w-12">회원권</label>
@@ -385,7 +387,6 @@ export function SessionModal({
                     <input
                       type="number"
                       min={1}
-                      max={pkgSize}
                       value={pkgIndex}
                       onChange={(e) => setPkgIndex(e.target.value)}
                       placeholder="예: 4"
@@ -395,8 +396,19 @@ export function SessionModal({
                   </>
                 )}
               </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={vip}
+                  onChange={(e) => setVip(e.target.checked)}
+                  className="w-[15px] h-[15px] cursor-pointer"
+                />
+                <span className="text-[0.78rem]">
+                  ⭐ VIP <span className="text-[0.7rem] text-mu">(수동 · 누적 100회↑ 자동)</span>
+                </span>
+              </label>
               <div className="text-[0.68rem] text-mu">
-                💡 이 수업 기준으로 앞뒤 회차가 자동 계산돼요.
+                💡 회차·회원권은 이 수업 기준으로 앞뒤 자동 계산. 누적을 몰라도 회원권만 넣어도 돼요.
               </div>
             </div>
           )}

@@ -6,7 +6,6 @@ import {
   fmtKo,
   getMember,
   getTrainer,
-  packageProgress,
   recentMemberMemoLog,
   sessionSlotKey,
   unblockSlot,
@@ -64,15 +63,20 @@ export function ActionMenu({
   const hasS = !!sess;
 
   const countOrd = sess ? meta.ordinals[`${date}_${sess.id}`] : undefined;
-  const countMem = sess ? getMember(db, sess.mid) : null;
+  const countPkg = sess ? meta.packages[`${date}_${sess.id}`] : undefined;
   const countVip = sess?.mid ? !!meta.members[sess.mid]?.vip : false;
-  const countPkg = countMem && countOrd != null ? packageProgress(countMem, countOrd) : null;
-  const countLine =
-    countOrd != null
-      ? `${countOrd}회차${countPkg ? ` · ${countPkg.size}회권 ${countPkg.index}/${countPkg.size}` : ""}${
-          countVip ? " · ⭐VIP" : ""
+  const countLine = (() => {
+    const parts: string[] = [];
+    if (countOrd != null) parts.push(`${countOrd}회차`);
+    if (countPkg)
+      parts.push(
+        `${countPkg.size}회권 ${countPkg.index}/${countPkg.size}${
+          countPkg.isOver ? " (초과)" : countPkg.isLast ? " (마지막)" : ""
         }`
-      : null;
+      );
+    if (countVip) parts.push("⭐VIP");
+    return parts.length ? parts.join(" · ") : null;
+  })();
 
   function run(a: Action) {
     if (a === "book") {
