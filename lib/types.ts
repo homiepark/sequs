@@ -21,6 +21,8 @@ export interface Member {
   tids?: TrainerId[];
   memo?: string;
   memoLog?: MemberMemoEntry[];
+  countSessions?: boolean; // 세션 회차 카운트 대상 (opt-in)
+  sessionStart?: number; // 앱 도입 전 누적 회차 (기본 0)
 }
 
 export function memberTrainers(m: Member): TrainerId[] {
@@ -104,6 +106,7 @@ export interface SalaryConfig {
   volansPrice: number;
   deductWithholding: boolean;
   withholdingRate?: number;
+  serverFee?: number; // 세금계산과 무관하게 총급여에 가산되는 고정 항목
 }
 
 export const SALARY_CONFIGS: Partial<Record<TrainerId, SalaryConfig>> = {
@@ -114,6 +117,7 @@ export const SALARY_CONFIGS: Partial<Record<TrainerId, SalaryConfig>> = {
     retirement: 120400,
     volansPrice: 18000,
     deductWithholding: false,
+    serverFee: 14000,
   },
   t3: {
     sessionPrice: 55000,
@@ -301,6 +305,60 @@ export function getSessionsForDate(db: DB, ds: string): Session[] {
     }))
     .filter((f) => !overridden.has(f.tid + "_" + f.time));
   return [...real, ...fixed];
+}
+
+// 회원 세션 회차 계산: 유료 진행분만 (사캔·당캔·결석·무료 제외) 을
+// 시간순으로 세어 sessionStart 를 기준점으로 회차 번호를 매긴다.
+// 반환 키는 `${date}_${sess.id}` → 해당 세션의 회차 번호.
+export function memberSessionOrdinals(
+  db: DB,
+  member: Member,
+  maxDate: string
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  const dates = new Set<string>();
+  db.sessions
+    .filter((s) => s.mid === member.id && s.date <= maxDate)
+    .forEach((s) => dates.add(s.date));
+  (db.fixedSchedules || [])
+    .filter((f) => f.mid === member.id)
+    .forEach((f) => {
+      const start = f.startDate || "2020-01-01";
+      const end = f.endDate && f.endDate < maxDate ? f.endDate : maxDate;
+      const s = new Date(start + "T00:00:00");
+      const e = new Date(end + "T00:00:00");
+      for (let x = new Date(s); x <= e; x.setDate(x.getDate() + 1)) {
+        const dow = x.getDay() === 0 ? 7 : x.getDay();
+        if (dow !== f.dayOfWeek) continue;
+        const ds = fmtDateToISO(x);
+        if (f.skippedDates?.includes(ds)) continue;
+        dates.add(ds);
+      }
+    });
+  let n = member.sessionStart || 0;
+  for (const ds of Array.from(dates).sort()) {
+    const daySess = getSessionsForDate(db, ds)
+      .filter((s) => s.mid === member.id)
+      .sort((a, b) => a.time.localeCompare(b.time));
+    for (const s of daySess) {
+      const st = db.att[`${ds}_${s.id}`];
+      if (st === "precancel" || st === "daycancel" || st === "absent") continue;
+      if (s.isFree) continue;
+      n += 1;
+      out[`${ds}_${s.id}`] = n;
+    }
+  }
+  return out;
+}
+
+// countSessions 가 켜진 회원 전체의 회차 맵을 합쳐서 반환.
+export function computeSessionCounts(db: DB, maxDate: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const m of db.members) {
+    if (!m.countSessions) continue;
+    Object.assign(out, memberSessionOrdinals(db, m, maxDate));
+  }
+  return out;
 }
 
 export function getAttStatus(db: DB, sess: Session): AttStatus | "auto" {

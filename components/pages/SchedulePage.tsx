@@ -4,6 +4,7 @@ import {
   DAYS_SHORT,
   HOURS,
   TRAINERS,
+  computeSessionCounts,
   fmtDateToISO,
   formatHourLabel,
   getSessionsForDate,
@@ -28,6 +29,7 @@ import { WeekTabs } from "../schedule/WeekTabs";
 import { MemberSearchModal } from "../members/MemberSearchModal";
 import { useGridGestures } from "@/lib/useGridGestures";
 import { useContainerWidth } from "@/lib/useContainerWidth";
+import { SessionCountProvider } from "@/lib/sessionCount";
 
 const TODAY = fmtDateToISO(new Date());
 
@@ -74,6 +76,11 @@ export function SchedulePage() {
 
   const allDay = fmtDateToISO(days[dayIdx] || days[0]);
 
+  const sessionCounts = useMemo(
+    () => computeSessionCounts(db, fmtDateToISO(days[days.length - 1])),
+    [db, days]
+  );
+
   function jumpToWeek(newOff: number) {
     setWeekOff(newOff);
     setDayIdx(newOff === 0 ? todayDow : 0);
@@ -89,6 +96,7 @@ export function SchedulePage() {
   }
 
   return (
+    <SessionCountProvider value={sessionCounts}>
     <div>
       <div className="font-bebas text-[1.6rem] tracking-[2px] mb-3">
         주간 <em className="text-acc not-italic">스케줄</em>
@@ -299,6 +307,7 @@ export function SchedulePage() {
         );
       })()}
     </div>
+    </SessionCountProvider>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 import { useStore } from "@/lib/store";
 import { useHighlight } from "@/lib/highlight";
+import { useSessionCounts } from "@/lib/sessionCount";
 import {
   getMember,
   getTrainer,
@@ -24,6 +25,8 @@ export function SessionCard({
 }) {
   const { db, mutate } = useStore();
   const { highlightMid } = useHighlight();
+  const sessionCounts = useSessionCounts();
+  const ordinal = sessionCounts[`${ds}_${sess.id}`];
   const t = getTrainer(tid)!;
   const mem = getMember(db, sess.mid);
   const ak = `${ds}_${sess.id}`;
@@ -93,6 +96,15 @@ export function SessionCard({
             title={sess.freeReason ? `무료 — ${sess.freeReason}` : "무료 수업"}
           >
             🎁{sess.freeReason && sess.freeReason.length <= 6 ? ` ${sess.freeReason}` : ""}
+          </span>
+        )}
+        {ordinal != null && (
+          <span
+            className="inline-block rounded px-1 font-black tracking-wider leading-none bg-black text-white whitespace-nowrap"
+            style={{ fontSize: `${tagSize}rem` }}
+            title={`${ordinal}회차`}
+          >
+            {ordinal}회차
           </span>
         )}
         {sess.isFixed && (
