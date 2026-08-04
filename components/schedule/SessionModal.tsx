@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
   TRAINERS,
@@ -48,6 +48,20 @@ export function SessionModal({
   const [isFree, setIsFree] = useState<boolean>(!!existing?.isFree);
   const [freeReason, setFreeReason] = useState<string>(existing?.freeReason || "");
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
+  const [countSessions, setCountSessions] = useState<boolean>(
+    !!getMember(db, existing?.mid)?.countSessions
+  );
+  const [sessionStart, setSessionStart] = useState<number>(
+    getMember(db, existing?.mid)?.sessionStart ?? 0
+  );
+
+  // 선택된 등록 회원이 바뀌면 그 회원의 회차 설정을 불러온다
+  useEffect(() => {
+    const m = sel.mid ? db.members.find((x) => x.id === sel.mid) : null;
+    setCountSessions(!!m?.countSessions);
+    setSessionStart(m?.sessionStart ?? 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sel.mid]);
 
   const preview = useMemo(() => {
     if (!isFixed || !fixedStart) return "";
@@ -137,6 +151,21 @@ export function SessionModal({
   function save() {
     if (!sel.mid && !sel.customName) {
       return alert("회원을 선택하거나 이름을 입력해주세요");
+    }
+
+    // 등록 회원이면 세션 회차 설정(회원 단위)도 함께 반영
+    if (sel.mid) {
+      const m = db.members.find((x) => x.id === sel.mid);
+      const nextStart = countSessions ? sessionStart : 0;
+      if (m && (!!m.countSessions !== countSessions || (m.sessionStart ?? 0) !== nextStart)) {
+        mutate("세션 회차 설정", (d) => {
+          const target = d.members.find((x) => x.id === sel.mid);
+          if (target) {
+            target.countSessions = countSessions;
+            target.sessionStart = nextStart;
+          }
+        });
+      }
     }
 
     if (isFixed && !existing) {
@@ -295,6 +324,36 @@ export function SessionModal({
           </div>
         );
       })()}
+
+      {sel.mid && (
+        <div className="mb-2 px-1">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={countSessions}
+              onChange={(e) => setCountSessions(e.target.checked)}
+              className="w-[15px] h-[15px] cursor-pointer"
+            />
+            <span className="text-[0.82rem]">
+              🔢 세션 회차 카운트
+              <span className="text-[0.72rem] text-mu ml-1">(카드에 N회차 · 캔슬/무료 제외)</span>
+            </span>
+          </label>
+          {countSessions && (
+            <div className="mt-2 ml-[22px] flex items-center gap-2 flex-wrap">
+              <label className="text-[0.74rem] text-mu">시작 회차</label>
+              <input
+                type="number"
+                min={0}
+                value={sessionStart}
+                onChange={(e) => setSessionStart(Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-16 bg-sf2 border border-bd text-tx px-2 py-1 rounded text-[0.84rem] text-center"
+              />
+              <span className="text-[0.72rem] text-mu">→ 다음 {sessionStart + 1}회차</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {!isFixed && (
         <label className="flex items-center gap-2 mb-2 px-1 cursor-pointer">
