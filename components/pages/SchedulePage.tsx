@@ -4,7 +4,7 @@ import {
   DAYS_SHORT,
   HOURS,
   TRAINERS,
-  computeSessionCounts,
+  computeScheduleMeta,
   fmtDateToISO,
   formatHourLabel,
   getSessionsForDate,
@@ -77,7 +77,7 @@ export function SchedulePage() {
   const allDay = fmtDateToISO(days[dayIdx] || days[0]);
 
   const sessionCounts = useMemo(
-    () => computeSessionCounts(db, fmtDateToISO(days[days.length - 1])),
+    () => computeScheduleMeta(db, fmtDateToISO(days[days.length - 1]), TODAY),
     [db, days]
   );
 

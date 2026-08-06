@@ -6,8 +6,11 @@ import {
   fmtDateToISO,
   getSessionsForDate,
   getTrainer,
+  memberPackagePositions,
   memberSessionOrdinals,
+  VIP_THRESHOLD,
   type Member,
+  type PkgPos,
   type Session,
 } from "@/lib/types";
 import { Modal } from "../ui/Modal";
@@ -18,6 +21,7 @@ interface Entry {
   status: string;
   color: string;
   ord?: number;
+  pkg?: PkgPos;
 }
 
 function weekdayShort(ds: string): string {
@@ -35,7 +39,7 @@ export function MemberScheduleModal({
   const { db } = useStore();
   const { setHighlightMid } = useHighlight();
 
-  const { past, future } = useMemo(() => {
+  const { past, future, total, vip } = useMemo(() => {
     const today = fmtDateToISO(new Date());
     const dates = new Set<string>();
     db.sessions.filter((s) => s.mid === member.id).forEach((s) => dates.add(s.date));
@@ -63,15 +67,20 @@ export function MemberScheduleModal({
       const { label, color } = describeStatus(att, ds <= today);
       all.push({ date: ds, sess, status: label, color });
     }
-    const ordinals = member.countSessions
-      ? memberSessionOrdinals(db, member, all.length ? all[all.length - 1].date : today)
-      : {};
+    const maxDate = all.length ? all[all.length - 1].date : today;
+    const ordinals = member.countSessions ? memberSessionOrdinals(db, member, maxDate) : {};
+    const pkgs = member.countSessions ? memberPackagePositions(db, member, maxDate) : {};
     all.forEach((e) => {
       e.ord = ordinals[`${e.date}_${e.sess.id}`];
+      e.pkg = pkgs[`${e.date}_${e.sess.id}`];
     });
+    const doneOrds = all.filter((e) => e.date <= today && e.ord != null).map((e) => e.ord as number);
+    const tot = doneOrds.length ? Math.max(...doneOrds) : 0;
     return {
       past: all.filter((e) => e.date < today).slice(-12).reverse(),
       future: all.filter((e) => e.date >= today).slice(0, 20),
+      total: tot,
+      vip: !!member.vip || (!!member.countSessions && tot >= VIP_THRESHOLD),
     };
   }, [db, member.id]);
 
@@ -82,6 +91,23 @@ export function MemberScheduleModal({
 
   return (
     <Modal title={`${member.name} 예약`} wide onClose={onClose}>
+      {member.countSessions && (total > 0 || vip) && (
+        <div className="mb-3 flex items-center gap-2 text-[0.8rem]">
+          {total > 0 && (
+            <span className="text-mu">
+              🔢 누적 <span className="font-bold text-tx">{total}회</span>
+            </span>
+          )}
+          {vip && (
+            <span
+              className="px-1.5 py-0.5 rounded text-[0.64rem] font-black leading-none"
+              style={{ background: "#e8b800", color: "#000" }}
+            >
+              ⭐VIP
+            </span>
+          )}
+        </div>
+      )}
       <div className="mb-3 flex items-center gap-2">
         <button
           onClick={showOnSchedule}
@@ -162,11 +188,19 @@ function Row({ entry }: { entry: Entry }) {
             </span>
           )}
         </div>
-        <div className="text-[0.72rem] text-mu flex items-center gap-1.5">
+        <div className="text-[0.72rem] text-mu flex items-center gap-1.5 flex-wrap">
           {t?.name}
           {entry.ord != null && (
             <span className="inline-block px-1.5 py-0.5 rounded bg-black text-white font-bold text-[0.64rem]">
               {entry.ord}회차
+            </span>
+          )}
+          {entry.pkg && (
+            <span
+              className="inline-block px-1.5 py-0.5 rounded text-white font-bold text-[0.64rem]"
+              style={{ background: entry.pkg.isLast || entry.pkg.isOver ? "#ff4d4d" : "#555" }}
+            >
+              {entry.pkg.index}/{entry.pkg.size}
             </span>
           )}
         </div>

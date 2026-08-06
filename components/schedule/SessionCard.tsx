@@ -1,7 +1,7 @@
 "use client";
 import { useStore } from "@/lib/store";
 import { useHighlight } from "@/lib/highlight";
-import { useSessionCounts } from "@/lib/sessionCount";
+import { useScheduleMeta } from "@/lib/sessionCount";
 import {
   getMember,
   getTrainer,
@@ -25,8 +25,11 @@ export function SessionCard({
 }) {
   const { db, mutate } = useStore();
   const { highlightMid } = useHighlight();
-  const sessionCounts = useSessionCounts();
-  const ordinal = sessionCounts[`${ds}_${sess.id}`];
+  const meta = useScheduleMeta();
+  const skey = `${ds}_${sess.id}`;
+  const ordinal = meta.ordinals[skey];
+  const pkg = meta.packages[skey];
+  const vip = sess.mid ? !!meta.members[sess.mid]?.vip : false;
   const t = getTrainer(tid)!;
   const mem = getMember(db, sess.mid);
   const ak = `${ds}_${sess.id}`;
@@ -98,15 +101,38 @@ export function SessionCard({
             🎁{sess.freeReason && sess.freeReason.length <= 6 ? ` ${sess.freeReason}` : ""}
           </span>
         )}
-        {ordinal != null && (
-          <span
-            className="inline-block rounded px-1 font-black tracking-wider leading-none bg-black text-white whitespace-nowrap"
-            style={{ fontSize: `${tagSize}rem` }}
-            title={`${ordinal}회차`}
-          >
-            {ordinal}회차
-          </span>
-        )}
+        {(ordinal != null || pkg || vip) && (() => {
+          const renewal = !!pkg && (pkg.isLast || pkg.isOver);
+          let bg: string;
+          let label: string;
+          let tip: string;
+          if (renewal) {
+            bg = "#ff4d4d";
+            label = `${pkg!.index}/${pkg!.size}`;
+            tip = `${pkg!.size}회권 ${pkg!.index}/${pkg!.size}${pkg!.isOver ? " (초과·재등록)" : " (마지막·재등록)"}`;
+          } else if (ordinal != null) {
+            bg = vip ? "#e8b800" : "#000";
+            label = `${vip ? "⭐" : ""}${ordinal}회`;
+            tip = `${ordinal}회차${vip ? " · VIP" : ""}`;
+          } else if (pkg) {
+            bg = vip ? "#e8b800" : "#000";
+            label = `${vip ? "⭐" : ""}${pkg.index}/${pkg.size}`;
+            tip = `${pkg.size}회권 ${pkg.index}/${pkg.size}${vip ? " · VIP" : ""}`;
+          } else {
+            bg = "#e8b800";
+            label = "⭐";
+            tip = "VIP";
+          }
+          return (
+            <span
+              className="inline-block rounded px-1 font-black tracking-wider leading-none text-white whitespace-nowrap"
+              style={{ fontSize: `${tagSize}rem`, background: bg }}
+              title={tip}
+            >
+              {label}
+            </span>
+          );
+        })()}
         {sess.isFixed && (
           <span
             className={`${

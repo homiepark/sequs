@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
+import { useScheduleMeta } from "@/lib/sessionCount";
 import {
   fmtKo,
   getMember,
@@ -55,10 +56,27 @@ export function ActionMenu({
 }) {
   const { db, mutate } = useStore();
   const isMobile = useIsMobile();
+  const meta = useScheduleMeta();
   const { date, time, tid, sess, isB } = ctx;
   const st = sess ? db.att[`${date}_${sess.id}`] || null : null;
   const isCan = st === "precancel" || st === "daycancel";
   const hasS = !!sess;
+
+  const countOrd = sess ? meta.ordinals[`${date}_${sess.id}`] : undefined;
+  const countPkg = sess ? meta.packages[`${date}_${sess.id}`] : undefined;
+  const countVip = sess?.mid ? !!meta.members[sess.mid]?.vip : false;
+  const countLine = (() => {
+    const parts: string[] = [];
+    if (countOrd != null) parts.push(`${countOrd}회차`);
+    if (countPkg)
+      parts.push(
+        `${countPkg.size}회권 ${countPkg.index}/${countPkg.size}${
+          countPkg.isOver ? " (초과)" : countPkg.isLast ? " (마지막)" : ""
+        }`
+      );
+    if (countVip) parts.push("⭐VIP");
+    return parts.length ? parts.join(" · ") : null;
+  })();
 
   function run(a: Action) {
     if (a === "book") {
@@ -231,6 +249,9 @@ export function ActionMenu({
             <div className="text-[0.75rem] text-mu mt-0.5">
               {date}{sess?.isFixed ? " · 고정일정" : ""}
             </div>
+            {countLine && (
+              <div className="text-[0.76rem] font-bold text-acc mt-1">{countLine}</div>
+            )}
           </div>
           {showMemoBlock && (
             <div className="px-4 pb-3 border-b border-bd mb-1.5 flex flex-col gap-2">
@@ -301,6 +322,11 @@ export function ActionMenu({
         className="fixed z-[450] bg-sf border border-bd rounded-[11px] p-1.5 min-w-[180px] max-w-[280px] shadow-2xl anim-fade-up overflow-y-auto overscroll-contain"
         style={{ left: x, top: y, maxHeight: `${maxH}px` }}
       >
+        {countLine && (
+          <div className="px-2 py-1.5 mb-1 text-[0.74rem] font-bold text-acc border-b border-bd">
+            {countLine}
+          </div>
+        )}
         {showMemoBlock && (
           <div className="flex flex-col gap-1 p-1.5 mb-1 border-b border-bd pb-2">
             {memberMemoText && (
