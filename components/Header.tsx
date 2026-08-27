@@ -9,6 +9,7 @@ const PAGES: { id: Page; label: string }[] = [
   { id: "fixed", label: "고정" },
   { id: "members", label: "회원" },
   { id: "stats", label: "통계" },
+  { id: "availability", label: "🕐 슬롯" },
 ];
 
 export function Header({ page, onChange }: { page: Page; onChange: (p: Page) => void }) {

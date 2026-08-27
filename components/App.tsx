@@ -5,12 +5,13 @@ import { SchedulePage } from "./pages/SchedulePage";
 import { FixedPage } from "./pages/FixedPage";
 import { MembersPage } from "./pages/MembersPage";
 import { StatsPage } from "./pages/StatsPage";
+import { AvailabilityPage } from "./pages/AvailabilityPage";
 import { Toast } from "./ui/Toast";
 import { PWARegister } from "./PWARegister";
 import { HighlightProvider } from "@/lib/highlight";
 import { useStore } from "@/lib/store";
 
-export type Page = "schedule" | "fixed" | "members" | "stats";
+export type Page = "schedule" | "fixed" | "members" | "stats" | "availability";
 
 export function App() {
   const [mounted, setMounted] = useState(false);
@@ -58,6 +59,7 @@ export function App() {
         {page === "fixed" && <FixedPage />}
         {page === "members" && <MembersPage />}
         {page === "stats" && <StatsPage />}
+        {page === "availability" && <AvailabilityPage />}
       </main>
       {toast && <Toast text={toast} />}
       <PWARegister />
